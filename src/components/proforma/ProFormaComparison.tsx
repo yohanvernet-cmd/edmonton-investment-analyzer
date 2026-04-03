@@ -4,15 +4,17 @@ import type { RevisedProForma } from '@/types';
 import { formatCurrency } from '@/lib/utils/format';
 
 export function ProFormaComparison({ revised }: { revised: RevisedProForma }) {
-  const rows = [
-    { label: 'Revenus annuels', original: revised.original.noi + revised.original.noi - revised.original.annualCashFlow, revisedVal: revised.adjustedRevenue },
-    { label: 'Dépenses annuelles', original: revised.original.noi + revised.original.noi - revised.original.annualCashFlow - revised.original.noi, revisedVal: revised.adjustedExpenses },
-    { label: 'NOI', original: revised.original.noi, revisedVal: revised.revised.noi },
-    { label: 'Cash Flow annuel', original: revised.original.annualCashFlow, revisedVal: revised.revised.annualCashFlow },
-    { label: 'Cap Rate', original: revised.original.capRate, revisedVal: revised.revised.capRate, isPercent: true },
-    { label: 'Cash-on-Cash Return', original: revised.original.cashOnCashReturn, revisedVal: revised.revised.cashOnCashReturn, isPercent: true },
-    { label: 'DSCR', original: revised.original.dscr, revisedVal: revised.revised.dscr, isRatio: true },
-    { label: 'Ratio dépenses', original: revised.original.operatingExpenseRatio, revisedVal: revised.revised.operatingExpenseRatio, isPercent: true },
+  const o = revised.original;
+  const r = revised.revised;
+
+  const rows: { label: string; original: number; revisedVal: number; format: (v: number) => string }[] = [
+    { label: 'NOI', original: o.noi, revisedVal: r.noi, format: formatCurrency },
+    { label: 'Cash Flow annuel', original: o.annualCashFlow, revisedVal: r.annualCashFlow, format: formatCurrency },
+    { label: 'Cap Rate', original: o.capRate, revisedVal: r.capRate, format: v => `${v}%` },
+    { label: 'Cash-on-Cash Return', original: o.cashOnCashReturn, revisedVal: r.cashOnCashReturn, format: v => `${v}%` },
+    { label: 'DSCR', original: o.dscr, revisedVal: r.dscr, format: v => v.toFixed(2) },
+    { label: 'Ratio dépenses', original: o.operatingExpenseRatio, revisedVal: r.operatingExpenseRatio, format: v => `${v}%` },
+    { label: 'Prix par unité', original: o.pricePerUnit, revisedVal: r.pricePerUnit, format: formatCurrency },
   ];
 
   return (
@@ -32,15 +34,13 @@ export function ProFormaComparison({ revised }: { revised: RevisedProForma }) {
           <tbody>
             {rows.map(r => {
               const diff = r.revisedVal - r.original;
-              const format = r.isPercent ? (v: number) => `${v}%` : r.isRatio ? (v: number) => v.toString() : formatCurrency;
-
               return (
                 <tr key={r.label} className="border-b border-slate-50">
                   <td className="py-2 text-slate-700">{r.label}</td>
-                  <td className="py-2 text-right font-medium">{format(r.original)}</td>
-                  <td className="py-2 text-right font-medium">{format(r.revisedVal)}</td>
-                  <td className={`py-2 text-right font-medium ${diff < 0 ? 'text-red-600' : diff > 0 ? 'text-green-600' : ''}`}>
-                    {diff >= 0 ? '+' : ''}{r.isPercent || r.isRatio ? diff.toFixed(2) : formatCurrency(diff)}
+                  <td className="py-2 text-right font-medium">{r.format(r.original)}</td>
+                  <td className="py-2 text-right font-medium">{r.format(r.revisedVal)}</td>
+                  <td className={`py-2 text-right font-medium ${diff < -0.01 ? 'text-red-600' : diff > 0.01 ? 'text-green-600' : ''}`}>
+                    {diff >= 0 ? '+' : ''}{r.format(diff)}
                   </td>
                 </tr>
               );

@@ -140,7 +140,7 @@ function analyzeExpenses(proForma: ProFormaData, neighborhood: NeighborhoodAnaly
   }
 
   // Property tax
-  const minTax = salePrice * mins.propertyTaxRate;
+  const minTax = Math.round(salePrice * mins.propertyTaxRate);
   items.push({
     category: 'Taxes foncières',
     projected: expenses.propertyTax,

@@ -10,7 +10,7 @@ export function PropertySummary({ proForma, metrics }: { proForma: ProFormaData;
 
   const items = [
     { label: 'Prix de vente', value: formatCurrency(proForma.salePrice) },
-    { label: 'Nombre d\'unités', value: proForma.numberOfUnits },
+    { label: 'Nombre d\'unités', value: String(proForma.numberOfUnits) },
     { label: 'Prix par unité', value: formatCurrency(ppu), sub: `${ppuDiff >= 0 ? '+' : ''}${ppuDiff.toFixed(1)}% vs marché` },
     { label: 'Mise de fonds', value: formatCurrency(proForma.downPayment) },
     { label: 'Prêt hypothécaire', value: formatCurrency(proForma.loan.amount), sub: `${proForma.loan.interestRate}% / ${proForma.loan.amortizationYears} ans` },
@@ -18,12 +18,12 @@ export function PropertySummary({ proForma, metrics }: { proForma: ProFormaData;
   ];
 
   const kpis = [
-    { label: 'NOI (ajusté)', value: formatCurrency(metrics.revised.noi) },
-    { label: 'Cash Flow annuel', value: formatCurrency(metrics.revised.annualCashFlow), highlight: metrics.revised.annualCashFlow < 0 },
-    { label: 'Cap Rate', value: `${metrics.revised.capRate}%` },
-    { label: 'Cash-on-Cash', value: `${metrics.revised.cashOnCashReturn}%` },
-    { label: 'DSCR', value: metrics.revised.dscr.toString() },
-    { label: 'Ratio dépenses', value: `${metrics.revised.operatingExpenseRatio}%` },
+    { label: 'NOI (ajusté)', value: formatCurrency(metrics.revised.noi), negative: false },
+    { label: 'Cash Flow annuel', value: formatCurrency(metrics.revised.annualCashFlow), negative: metrics.revised.annualCashFlow < 0 },
+    { label: 'Cap Rate', value: `${metrics.revised.capRate}%`, negative: false },
+    { label: 'Cash-on-Cash', value: `${metrics.revised.cashOnCashReturn}%`, negative: metrics.revised.cashOnCashReturn < 0 },
+    { label: 'DSCR', value: metrics.revised.dscr.toFixed(2), negative: metrics.revised.dscr < 1 },
+    { label: 'Ratio dépenses', value: `${metrics.revised.operatingExpenseRatio}%`, negative: false },
   ];
 
   return (
@@ -42,9 +42,9 @@ export function PropertySummary({ proForma, metrics }: { proForma: ProFormaData;
       <h4 className="text-sm font-medium text-slate-700 mb-3">Indicateurs clés (ajustés)</h4>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {kpis.map(k => (
-          <div key={k.label} className={k.highlight ? 'text-red-600' : ''}>
+          <div key={k.label}>
             <div className="text-xs text-slate-500">{k.label}</div>
-            <div className="text-sm font-bold">{k.value}</div>
+            <div className={`text-sm font-bold ${k.negative ? 'text-red-600' : ''}`}>{k.value}</div>
           </div>
         ))}
       </div>
