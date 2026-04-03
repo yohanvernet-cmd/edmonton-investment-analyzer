@@ -1,0 +1,84 @@
+'use client';
+
+import type { NeighborhoodAnalysis } from '@/types';
+
+export function NeighborhoodCard({ neighborhood }: { neighborhood: NeighborhoodAnalysis }) {
+  const n = neighborhood;
+
+  return (
+    <div className="card">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-slate-900">Analyse du quartier</h3>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-slate-500">Score:</span>
+          <span className={`text-lg font-bold ${n.overallScore >= 7 ? 'text-green-600' : n.overallScore >= 5 ? 'text-yellow-600' : 'text-red-600'}`}>
+            {n.overallScore}/10
+          </span>
+        </div>
+      </div>
+
+      <p className="text-sm text-slate-500 mb-6">{n.scoreJustification}</p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Demographics */}
+        <div>
+          <h4 className="text-sm font-medium text-slate-700 mb-2">👥 Profil démographique</h4>
+          <div className="space-y-1 text-sm text-slate-600">
+            <div>Type: <span className="font-medium">{n.demographics.marketType}</span></div>
+            <div>Propriétaires: {n.demographics.ownerPercent}% | Locataires: {n.demographics.renterPercent}%</div>
+            <div>Profil: {n.demographics.socioEconomic}</div>
+          </div>
+        </div>
+
+        {/* Vacancy */}
+        <div>
+          <h4 className="text-sm font-medium text-slate-700 mb-2">🏠 Taux de vacance</h4>
+          <div className="space-y-1 text-sm text-slate-600">
+            <div>Actuel: <span className="font-medium">{n.vacancy.currentRate}%</span></div>
+            <div>Moyenne Edmonton: {n.vacancy.cityAverage}%</div>
+            <div className="flex gap-2 mt-1">
+              {n.vacancy.historicalTrend.map(t => (
+                <span key={t.year} className="text-xs bg-slate-100 px-1.5 py-0.5 rounded">{t.year}: {t.rate}%</span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Safety */}
+        <div>
+          <h4 className="text-sm font-medium text-slate-700 mb-2">🛡️ Sécurité</h4>
+          <div className="space-y-1 text-sm text-slate-600">
+            <div>Indice criminalité: <span className={`font-medium ${n.safety.crimeRate > 120 ? 'text-red-600' : 'text-green-600'}`}>{n.safety.crimeRate}</span> (moy: {n.safety.cityAverage})</div>
+            <div>Tendance: {n.safety.trend}</div>
+            <div className="text-xs text-slate-400">{n.safety.predominantCrimes.join(', ')}</div>
+          </div>
+        </div>
+
+        {/* Market Rents */}
+        <div>
+          <h4 className="text-sm font-medium text-slate-700 mb-2">💰 Loyers moyens du marché</h4>
+          <div className="space-y-1 text-sm text-slate-600">
+            {n.marketRents.map(r => (
+              <div key={r.unitType} className="flex justify-between">
+                <span>{r.unitType}</span>
+                <span className="font-medium">${r.averageRent}/mois</span>
+              </div>
+            ))}
+            <div className="text-xs text-slate-400 mt-1">Source: {n.marketRents[0]?.source}</div>
+          </div>
+        </div>
+
+        {/* Accessibility */}
+        <div>
+          <h4 className="text-sm font-medium text-slate-700 mb-2">🚌 Accessibilité</h4>
+          <div className="space-y-1 text-sm text-slate-600">
+            <div>Transport: {n.accessibility.transitDistance}</div>
+            <div>Services: {n.accessibility.essentialServices}</div>
+            <div>Walk Score: <span className="font-medium">{n.accessibility.walkScore}</span></div>
+            <div>{n.accessibility.highwayAccess}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

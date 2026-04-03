@@ -1,0 +1,53 @@
+'use client';
+
+import type { ProFormaData, RevisedProForma } from '@/types';
+import { formatCurrency } from '@/lib/utils/format';
+import { EDMONTON_MARKET } from '@/lib/data/edmonton-market';
+
+export function PropertySummary({ proForma, metrics }: { proForma: ProFormaData; metrics: RevisedProForma }) {
+  const ppu = metrics.original.pricePerUnit;
+  const ppuDiff = ((ppu - EDMONTON_MARKET.averagePricePerUnit) / EDMONTON_MARKET.averagePricePerUnit) * 100;
+
+  const items = [
+    { label: 'Prix de vente', value: formatCurrency(proForma.salePrice) },
+    { label: 'Nombre d\'unités', value: proForma.numberOfUnits },
+    { label: 'Prix par unité', value: formatCurrency(ppu), sub: `${ppuDiff >= 0 ? '+' : ''}${ppuDiff.toFixed(1)}% vs marché` },
+    { label: 'Mise de fonds', value: formatCurrency(proForma.downPayment) },
+    { label: 'Prêt hypothécaire', value: formatCurrency(proForma.loan.amount), sub: `${proForma.loan.interestRate}% / ${proForma.loan.amortizationYears} ans` },
+    { label: 'Paiement mensuel', value: formatCurrency(proForma.loan.monthlyPayment) },
+  ];
+
+  const kpis = [
+    { label: 'NOI (ajusté)', value: formatCurrency(metrics.revised.noi) },
+    { label: 'Cash Flow annuel', value: formatCurrency(metrics.revised.annualCashFlow), highlight: metrics.revised.annualCashFlow < 0 },
+    { label: 'Cap Rate', value: `${metrics.revised.capRate}%` },
+    { label: 'Cash-on-Cash', value: `${metrics.revised.cashOnCashReturn}%` },
+    { label: 'DSCR', value: metrics.revised.dscr.toString() },
+    { label: 'Ratio dépenses', value: `${metrics.revised.operatingExpenseRatio}%` },
+  ];
+
+  return (
+    <div className="card">
+      <h3 className="font-semibold text-slate-900 mb-4">Résumé de la propriété</h3>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+        {items.map(i => (
+          <div key={i.label}>
+            <div className="text-xs text-slate-500">{i.label}</div>
+            <div className="text-sm font-semibold">{i.value}</div>
+            {i.sub && <div className="text-xs text-slate-400">{i.sub}</div>}
+          </div>
+        ))}
+      </div>
+      <hr className="border-slate-100 mb-4" />
+      <h4 className="text-sm font-medium text-slate-700 mb-3">Indicateurs clés (ajustés)</h4>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        {kpis.map(k => (
+          <div key={k.label} className={k.highlight ? 'text-red-600' : ''}>
+            <div className="text-xs text-slate-500">{k.label}</div>
+            <div className="text-sm font-bold">{k.value}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
