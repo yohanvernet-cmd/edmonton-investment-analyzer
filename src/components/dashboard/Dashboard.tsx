@@ -9,14 +9,16 @@ import { ExpenseCard } from '@/components/analysis/ExpenseCard';
 import { ProFormaComparison } from '@/components/proforma/ProFormaComparison';
 import { ExecutiveSummary } from './ExecutiveSummary';
 
-interface Props { analysis: FullAnalysis; onReset: () => void; }
+interface Props {
+  analysis: FullAnalysis & { executiveSummary?: string; negotiationTips?: string[] };
+  onReset: () => void;
+}
 
 export function Dashboard({ analysis, onReset }: Props) {
   const { proForma, neighborhood, revenueAnalysis, expenseAnalysis, revisedProForma, investmentScore } = analysis;
 
   return (
     <div className="space-y-6">
-      {/* Top bar */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold">Rapport d&apos;analyse</h2>
@@ -27,7 +29,6 @@ export function Dashboard({ analysis, onReset }: Props) {
         </button>
       </div>
 
-      {/* Score + Property summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <ScoreOverview score={investmentScore} />
         <div className="lg:col-span-2">
@@ -35,19 +36,19 @@ export function Dashboard({ analysis, onReset }: Props) {
         </div>
       </div>
 
-      {/* Executive summary */}
-      <ExecutiveSummary score={investmentScore} />
+      <ExecutiveSummary
+        score={investmentScore}
+        executiveSummary={analysis.executiveSummary}
+        negotiationTips={analysis.negotiationTips}
+      />
 
-      {/* Neighborhood */}
       <NeighborhoodCard neighborhood={neighborhood} />
 
-      {/* Revenue & Expenses */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <RevenueCard analysis={revenueAnalysis} />
         <ExpenseCard analysis={expenseAnalysis} />
       </div>
 
-      {/* Pro Forma Comparison */}
       <ProFormaComparison revised={revisedProForma} />
     </div>
   );
