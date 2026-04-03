@@ -108,29 +108,47 @@ Réponds UNIQUEMENT avec du JSON valide:
   "negotiationTips": ["string (conseils de négociation basés sur l'analyse)"]
 }`;
 
-// ── Gemini API call ──
+// ── Gemini API call with retry ──
 
 async function callGemini(prompt: string, userContent: string, apiKey: string): Promise<any> {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: `${prompt}\n\n${userContent}` }] }],
-        generationConfig: { temperature: 0.1, responseMimeType: 'application/json' },
-      }),
-    }
-  );
+  const models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Gemini API error (${res.status}): ${err}`);
+  for (const model of models) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `${prompt}\n\n${userContent}` }] }],
+            generationConfig: { temperature: 0.1, responseMimeType: 'application/json' },
+          }),
+        }
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        return JSON.parse(text);
+      }
+
+      if (res.status === 429) {
+        // Rate limited — wait and retry
+        const wait = (attempt + 1) * 15;
+        console.log(`Rate limited on ${model}, waiting ${wait}s (attempt ${attempt + 1}/3)`);
+        await new Promise(r => setTimeout(r, wait * 1000));
+        continue;
+      }
+
+      // Other error — try next model
+      const err = await res.text();
+      console.error(`Gemini ${model} error (${res.status}): ${err}`);
+      break;
+    }
   }
 
-  const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-  return JSON.parse(text);
+  throw new Error('Tous les modèles IA sont indisponibles. Réessayez dans quelques minutes.');
 }
 
 // ── Public functions ──

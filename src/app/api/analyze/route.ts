@@ -42,7 +42,8 @@ export async function POST(req: NextRequest) {
       }, { status: 422 });
     }
 
-    // Step 3: AI analyzes the neighborhood
+    // Step 3: AI analyzes the neighborhood (wait 2s to avoid rate limit)
+    await new Promise(r => setTimeout(r, 2000));
     const aiNeighborhood = await analyzeNeighborhoodWithAI(proForma.address, apiKey);
 
     // Step 4: Run financial analysis (deterministic calculations)
@@ -51,7 +52,8 @@ export async function POST(req: NextRequest) {
     // Override neighborhood with AI data
     analysis.neighborhood = mergeNeighborhoodData(analysis.neighborhood, aiNeighborhood);
 
-    // Step 5: AI generates smart executive summary
+    // Step 5: AI generates smart executive summary (wait 2s to avoid rate limit)
+    await new Promise(r => setTimeout(r, 2000));
     const aiSummary = await generateSmartSummary({
       proForma,
       neighborhood: analysis.neighborhood,
