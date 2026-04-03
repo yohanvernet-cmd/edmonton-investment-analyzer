@@ -87,7 +87,7 @@ Réponds UNIQUEMENT avec du JSON valide:
 
 // ── Gemini API ──
 
-const MODELS = ['gemini-2.5-flash-preview-04-17', 'gemini-1.5-flash-latest'];
+const MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash'];
 
 async function callGemini(prompt: string, userContent: string, apiKey: string): Promise<any> {
   let lastError = '';
