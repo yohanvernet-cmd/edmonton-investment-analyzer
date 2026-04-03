@@ -25,7 +25,7 @@ Format attendu:
       "type": "description de l'unité",
       "bedrooms": number,
       "configuration": "basement" | "upper" | "main" | "unknown",
-      "monthlyRent": number (loyer de base seulement),
+      "monthlyRent": number,
       "parkingFee": number,
       "petFee": number
     }
@@ -34,27 +34,25 @@ Format attendu:
   "closingCosts": number | null,
   "loan": {
     "amount": number | null,
-    "interestRate": number (en pourcentage, ex: 5.25),
+    "interestRate": number,
     "amortizationYears": number
   },
   "expenses": {
-    "propertyTax": number (annuel),
-    "insurance": number (annuel),
-    "maintenance": number (annuel),
-    "management": number (annuel),
-    "vacancyPercent": number (en pourcentage),
-    "caretaker": number (annuel),
-    "capitalReserve": number (annuel),
-    "utilities": number (annuel),
-    "other": number (annuel)
+    "propertyTax": number,
+    "insurance": number,
+    "maintenance": number,
+    "management": number,
+    "vacancyPercent": number,
+    "caretaker": number,
+    "capitalReserve": number,
+    "utilities": number,
+    "other": number
   }
 }`;
 
 const NEIGHBORHOOD_PROMPT = `Tu es un expert en immobilier à Edmonton, Alberta. On te donne une adresse.
 Fournis une analyse détaillée du quartier pour un investisseur locatif.
-
 Utilise tes connaissances sur Edmonton pour fournir des données RÉALISTES.
-Si tu ne connais pas le quartier exact, base-toi sur le secteur général.
 
 Réponds UNIQUEMENT avec du JSON valide:
 {
@@ -65,90 +63,72 @@ Réponds UNIQUEMENT avec du JSON valide:
     "marketType": "Quartier de locataires" | "Quartier de propriétaires" | "Quartier mixte",
     "socioEconomic": "string"
   },
-  "vacancy": {
-    "currentRate": number,
-    "trend": "En baisse" | "Stable" | "En hausse",
-    "cityAverage": 4.3
-  },
-  "marketRents": {
-    "basement_1br": number,
-    "basement_2br": number,
-    "upper_3br": number,
-    "main_2br": number
-  },
-  "safety": {
-    "crimeIndex": number (100 = moyenne Edmonton),
-    "predominantCrimes": ["string"],
-    "trend": "En amélioration" | "Stable" | "En détérioration"
-  },
-  "accessibility": {
-    "walkScore": number (0-100),
-    "transitScore": number (0-100),
-    "nearestLRT": "string",
-    "nearestGrocery": "string",
-    "highwayAccess": "string"
-  },
-  "overallScore": number (1-10, pour investissement locatif),
-  "scoreJustification": "string (2-3 phrases)"
+  "vacancy": { "currentRate": number, "trend": "string", "cityAverage": 4.3 },
+  "marketRents": { "basement_1br": number, "basement_2br": number, "upper_3br": number, "main_2br": number },
+  "safety": { "crimeIndex": number, "predominantCrimes": ["string"], "trend": "string" },
+  "accessibility": { "walkScore": number, "transitScore": number, "nearestLRT": "string", "nearestGrocery": "string", "highwayAccess": "string" },
+  "overallScore": number,
+  "scoreJustification": "string"
 }`;
 
 const SUMMARY_PROMPT = `Tu es un conseiller en investissement immobilier à Edmonton.
 On te donne les résultats complets d'une analyse de pro forma.
-
 Génère un résumé exécutif intelligent et personnalisé. Sois direct et honnête.
-Identifie les vrais problèmes et les vraies opportunités.
 
 Réponds UNIQUEMENT avec du JSON valide:
 {
-  "strengths": ["string (max 5, spécifiques à cette propriété)"],
-  "weaknesses": ["string (max 5, spécifiques)"],
-  "risks": ["string (max 5)"],
-  "opportunities": ["string (max 5)"],
-  "executiveSummary": "string (paragraphe de 3-5 phrases, recommandation claire)",
-  "negotiationTips": ["string (conseils de négociation basés sur l'analyse)"]
+  "strengths": ["string"],
+  "weaknesses": ["string"],
+  "risks": ["string"],
+  "opportunities": ["string"],
+  "executiveSummary": "string",
+  "negotiationTips": ["string"]
 }`;
 
-// ── Gemini API call with retry ──
+// ── Gemini API ──
+
+const MODELS = ['gemini-2.5-flash-preview-04-17', 'gemini-1.5-flash-latest'];
 
 async function callGemini(prompt: string, userContent: string, apiKey: string): Promise<any> {
-  const models = ['gemini-2.5-flash-preview-04-17', 'gemini-2.0-flash-001', 'gemini-1.5-flash'];
+  let lastError = '';
 
-  for (const model of models) {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: `${prompt}\n\n${userContent}` }] }],
-            generationConfig: { temperature: 0.1, responseMimeType: 'application/json' },
-          }),
+  for (const model of MODELS) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: `${prompt}\n\n${userContent}` }] }],
+              generationConfig: { temperature: 0.1, responseMimeType: 'application/json' },
+            }),
+          }
+        );
+
+        if (res.ok) {
+          const data = await res.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+          return JSON.parse(text);
         }
-      );
 
-      if (res.ok) {
-        const data = await res.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-        return JSON.parse(text);
+        if (res.status === 429) {
+          const wait = (attempt + 1) * 16;
+          await new Promise(r => setTimeout(r, wait * 1000));
+          continue;
+        }
+
+        lastError = `${model}: ${res.status}`;
+        break; // try next model
+      } catch (e: any) {
+        lastError = `${model}: ${e.message}`;
+        break;
       }
-
-      if (res.status === 429) {
-        // Rate limited — wait and retry
-        const wait = (attempt + 1) * 15;
-        console.log(`Rate limited on ${model}, waiting ${wait}s (attempt ${attempt + 1}/3)`);
-        await new Promise(r => setTimeout(r, wait * 1000));
-        continue;
-      }
-
-      // Other error — try next model
-      const err = await res.text();
-      console.error(`Gemini ${model} error (${res.status}): ${err}`);
-      break;
     }
   }
 
-  throw new Error('Tous les modèles IA sont indisponibles. Réessayez dans quelques minutes.');
+  throw new Error(`IA indisponible (${lastError}). Réessayez dans quelques minutes.`);
 }
 
 // ── Public functions ──
@@ -172,11 +152,9 @@ export async function extractWithAI(content: string, apiKey: string): Promise<Pr
   const mr = (rate / 100) / 12;
   const n = amort * 12;
   const monthlyPayment = loanAmount * (mr * Math.pow(1 + mr, n)) / (Math.pow(1 + mr, n) - 1);
-
   const totalMonthlyRevenue = units.reduce((s: number, u: any) => s + u.monthlyRent + u.parkingFee + u.petFee, 0);
 
   const exp = parsed.expenses || {};
-  const vacancyPct = exp.vacancyPercent || 3;
   const totalExpenses = (exp.propertyTax || 0) + (exp.insurance || 0) + (exp.maintenance || 0) +
     (exp.management || 0) + (exp.caretaker || 0) + (exp.capitalReserve || 0) +
     (exp.utilities || 0) + (exp.other || 0);
@@ -190,24 +168,13 @@ export async function extractWithAI(content: string, apiKey: string): Promise<Pr
     totalAnnualRevenue: totalMonthlyRevenue * 12,
     downPayment: parsed.downPayment || salePrice * 0.2,
     closingCosts: parsed.closingCosts || salePrice * 0.015,
-    loan: {
-      amount: loanAmount,
-      interestRate: rate,
-      amortizationYears: amort,
-      monthlyPayment: Math.round(monthlyPayment * 100) / 100,
-    },
+    loan: { amount: loanAmount, interestRate: rate, amortizationYears: amort, monthlyPayment: Math.round(monthlyPayment * 100) / 100 },
     expenses: {
-      propertyTax: exp.propertyTax || 0,
-      insurance: exp.insurance || 0,
-      maintenance: exp.maintenance || 0,
-      management: exp.management || 0,
-      vacancy: vacancyPct,
-      vacancyDollar: 0,
-      caretaker: exp.caretaker || 0,
-      capitalReserve: exp.capitalReserve || 0,
-      utilities: exp.utilities || 0,
-      other: exp.other || 0,
-      totalAnnual: totalExpenses,
+      propertyTax: exp.propertyTax || 0, insurance: exp.insurance || 0,
+      maintenance: exp.maintenance || 0, management: exp.management || 0,
+      vacancy: exp.vacancyPercent || 3, vacancyDollar: 0,
+      caretaker: exp.caretaker || 0, capitalReserve: exp.capitalReserve || 0,
+      utilities: exp.utilities || 0, other: exp.other || 0, totalAnnual: totalExpenses,
     },
   };
 }
