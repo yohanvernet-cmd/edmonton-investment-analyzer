@@ -10,8 +10,8 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as File;
     if (!file) return NextResponse.json({ error: 'Aucun fichier fourni' }, { status: 400 });
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) return NextResponse.json({ error: 'Clé API OpenAI non configurée' }, { status: 500 });
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return NextResponse.json({ error: 'Clé API Gemini non configurée' }, { status: 500 });
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const name = file.name.toLowerCase();
@@ -74,8 +74,8 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     console.error('Analysis error:', err);
 
-    if (err.message?.includes('API key')) {
-      return NextResponse.json({ error: 'Clé API OpenAI invalide. Vérifiez votre configuration.' }, { status: 401 });
+    if (err.message?.includes('API key') || err.message?.includes('API_KEY')) {
+      return NextResponse.json({ error: 'Clé API Gemini invalide. Vérifiez votre configuration.' }, { status: 401 });
     }
     if (err.message?.includes('JSON')) {
       return NextResponse.json({ error: 'Erreur de parsing de la réponse IA. Réessayez.' }, { status: 500 });

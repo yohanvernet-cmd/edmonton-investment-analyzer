@@ -1,4 +1,3 @@
-import OpenAI from 'openai';
 import type { ProFormaData } from '@/types';
 
 const EXTRACTION_PROMPT = `Tu es un expert en analyse d'investissement immobilier à Edmonton, Alberta.
@@ -109,22 +108,36 @@ Réponds UNIQUEMENT avec du JSON valide:
   "negotiationTips": ["string (conseils de négociation basés sur l'analyse)"]
 }`;
 
+// ── Gemini API call ──
+
+async function callGemini(prompt: string, userContent: string, apiKey: string): Promise<any> {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: `${prompt}\n\n${userContent}` }] }],
+        generationConfig: { temperature: 0.1, responseMimeType: 'application/json' },
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Gemini API error (${res.status}): ${err}`);
+  }
+
+  const data = await res.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  return JSON.parse(text);
+}
+
+// ── Public functions ──
+
 export async function extractWithAI(content: string, apiKey: string): Promise<ProFormaData> {
-  const openai = new OpenAI({ apiKey });
+  const parsed = await callGemini(EXTRACTION_PROMPT, `Voici le contenu du pro forma:\n\n${content}`, apiKey);
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    temperature: 0.1,
-    messages: [
-      { role: 'system', content: EXTRACTION_PROMPT },
-      { role: 'user', content: `Voici le contenu du pro forma:\n\n${content}` },
-    ],
-  });
-
-  const raw = response.choices[0]?.message?.content?.trim() || '{}';
-  const parsed = JSON.parse(raw);
-
-  // Calculate derived fields
   const units = (parsed.units || []).map((u: any) => ({
     type: u.type || 'Unknown',
     bedrooms: u.bedrooms || 2,
@@ -182,33 +195,9 @@ export async function extractWithAI(content: string, apiKey: string): Promise<Pr
 }
 
 export async function analyzeNeighborhoodWithAI(address: string, apiKey: string) {
-  const openai = new OpenAI({ apiKey });
-
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    temperature: 0.3,
-    messages: [
-      { role: 'system', content: NEIGHBORHOOD_PROMPT },
-      { role: 'user', content: `Adresse de la propriété: ${address}` },
-    ],
-  });
-
-  const raw = response.choices[0]?.message?.content?.trim() || '{}';
-  return JSON.parse(raw);
+  return callGemini(NEIGHBORHOOD_PROMPT, `Adresse de la propriété: ${address}`, apiKey);
 }
 
 export async function generateSmartSummary(analysisData: any, apiKey: string) {
-  const openai = new OpenAI({ apiKey });
-
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    temperature: 0.4,
-    messages: [
-      { role: 'system', content: SUMMARY_PROMPT },
-      { role: 'user', content: `Voici l'analyse complète:\n\n${JSON.stringify(analysisData, null, 2)}` },
-    ],
-  });
-
-  const raw = response.choices[0]?.message?.content?.trim() || '{}';
-  return JSON.parse(raw);
+  return callGemini(SUMMARY_PROMPT, `Voici l'analyse complète:\n\n${JSON.stringify(analysisData, null, 2)}`, apiKey);
 }
