@@ -325,8 +325,9 @@ function scoreInvestment(
   breakdown.push({ category: 'Prix par unité', score: ppuScore, maxScore: 30, details: `${fmt(ppu)}/unité — ${ppuRating.label}` });
 
   // Neighborhood (30 pts)
-  const nScore = Math.round((neighborhood.overallScore / 10) * 30);
-  breakdown.push({ category: 'Qualité du quartier', score: nScore, maxScore: 30, details: `Score quartier: ${neighborhood.overallScore}/10` });
+  const rawNeighborhoodScore = Math.min(neighborhood.overallScore, 10); // AI sometimes returns /100, cap at 10
+  const nScore = Math.min(30, Math.round((rawNeighborhoodScore / 10) * 30));
+  breakdown.push({ category: 'Qualité du quartier', score: nScore, maxScore: 30, details: `Score quartier: ${rawNeighborhoodScore}/10` });
 
   // Financial return (30 pts)
   const cocr = revised.revised.cashOnCashReturn;

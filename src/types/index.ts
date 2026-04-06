@@ -13,6 +13,7 @@ export interface LoanDetails {
   interestRate: number;
   amortizationYears: number;
   monthlyPayment: number;
+  cmhcInsurance: number;
 }
 
 export interface ProFormaData {

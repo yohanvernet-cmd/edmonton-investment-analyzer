@@ -14,7 +14,7 @@ export function PropertySummary({ proForma, metrics }: { proForma: ProFormaData;
     { label: 'Nombre d\'unités', value: String(proForma.numberOfUnits) },
     { label: 'Prix par unité', value: formatCurrency(ppu), sub: `${ppuRating.emoji} ${ppuRating.label}` },
     { label: 'Mise de fonds', value: formatCurrency(proForma.downPayment) },
-    { label: 'Prêt hypothécaire', value: formatCurrency(proForma.loan.amount), sub: `${proForma.loan.interestRate}% / ${proForma.loan.amortizationYears} ans` },
+    { label: 'Prêt hypothécaire', value: formatCurrency(proForma.loan.amount), sub: `${proForma.loan.interestRate}% / ${proForma.loan.amortizationYears} ans${proForma.loan.cmhcInsurance ? ` (incl. SCHL ${formatCurrency(proForma.loan.cmhcInsurance)})` : ''}` },
     { label: 'Paiement mensuel', value: formatCurrency(proForma.loan.monthlyPayment) },
   ];
 

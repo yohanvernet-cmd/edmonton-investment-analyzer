@@ -40,7 +40,8 @@ Réponds UNIQUEMENT avec du JSON valide, sans markdown, sans explication.
   "loan": {
     "amount": number | null,
     "interestRate": number (EN POURCENTAGE: 4.5 signifie 4.5%, JAMAIS 0.045),
-    "amortizationYears": number
+    "amortizationYears": number,
+    "cmhcInsurance": number | null (CMHC insurance premium / CMHC premium / assurance SCHL, en $)
   },
   "expenses": {
     "propertyTax": number (ANNUEL en $),
@@ -212,7 +213,9 @@ export async function extractWithAI(content: string, apiKey: string): Promise<Pr
   }
 
   const salePrice = parsed.salePrice || 0;
-  const loanAmount = parsed.loan?.amount || salePrice * 0.8;
+  const cmhcInsurance = parsed.loan?.cmhcInsurance || 0;
+  const baseLoanAmount = parsed.loan?.amount || salePrice * 0.8;
+  const loanAmount = cmhcInsurance > 0 ? baseLoanAmount + cmhcInsurance : baseLoanAmount;
   const rate = fixInterestRate(parsed.loan?.interestRate || 5);
   const amort = parsed.loan?.amortizationYears || 25;
   const mr = (rate / 100) / 12;
@@ -253,7 +256,7 @@ export async function extractWithAI(content: string, apiKey: string): Promise<Pr
     totalAnnualRevenue,
     downPayment: parsed.downPayment || salePrice * 0.2,
     closingCosts: parsed.closingCosts || salePrice * 0.015,
-    loan: { amount: loanAmount, interestRate: rate, amortizationYears: amort, monthlyPayment: Math.round(monthlyPayment * 100) / 100 },
+    loan: { amount: loanAmount, interestRate: rate, amortizationYears: amort, monthlyPayment: Math.round(monthlyPayment * 100) / 100, cmhcInsurance },
     expenses: {
       propertyTax, insurance, maintenance, management,
       vacancy: vacancyPercent,

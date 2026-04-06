@@ -160,7 +160,7 @@ function extractLoan(cells: CellEntry[], salePrice: number): LoanDetails {
   const n = amort * 12;
   const monthlyPayment = amount * (monthlyRate * Math.pow(1 + monthlyRate, n)) / (Math.pow(1 + monthlyRate, n) - 1);
 
-  return { amount, interestRate: rate, amortizationYears: amort, monthlyPayment: Math.round(monthlyPayment * 100) / 100 };
+  return { amount, interestRate: rate, amortizationYears: amort, monthlyPayment: Math.round(monthlyPayment * 100) / 100, cmhcInsurance: 0 };
 }
 
 function extractExpenses(cells: CellEntry[], salePrice: number): ExpenseBreakdown {

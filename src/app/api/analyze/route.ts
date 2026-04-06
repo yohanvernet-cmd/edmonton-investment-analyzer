@@ -132,7 +132,14 @@ function mergeNeighborhoodData(base: NeighborhoodAnalysis, ai: any): Neighborhoo
       walkScore: ai.accessibility?.walkScore ?? base.accessibility.walkScore,
       highwayAccess: ai.accessibility?.highwayAccess ?? base.accessibility.highwayAccess,
     },
-    overallScore: ai.overallScore ?? base.overallScore,
+    overallScore: normalizeScore(ai.overallScore) ?? base.overallScore,
     scoreJustification: ai.scoreJustification ?? base.scoreJustification,
   };
+}
+
+/** AI sometimes returns score on /100 instead of /10 — normalize */
+function normalizeScore(score: number | undefined): number | undefined {
+  if (score === undefined || score === null) return undefined;
+  if (score > 10) return Math.min(10, Math.round(score / 10));
+  return score;
 }

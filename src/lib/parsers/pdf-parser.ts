@@ -113,7 +113,7 @@ function extractLoanFromText(text: string, salePrice: number): LoanDetails {
   const n = amort * 12;
   const monthlyPayment = amount * (mr * Math.pow(1 + mr, n)) / (Math.pow(1 + mr, n) - 1);
 
-  return { amount, interestRate: rate, amortizationYears: amort, monthlyPayment: Math.round(monthlyPayment * 100) / 100 };
+  return { amount, interestRate: rate, amortizationYears: amort, monthlyPayment: Math.round(monthlyPayment * 100) / 100, cmhcInsurance: 0 };
 }
 
 function extractExpensesFromText(text: string, salePrice: number): ExpenseBreakdown {
