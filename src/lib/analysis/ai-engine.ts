@@ -66,7 +66,13 @@ POUR LES LOYERS DU MARCHÉ — C'EST CRITIQUE:
 - Les 3 chambres sont à l'ÉTAGE SUPÉRIEUR (upper level) — plus cher car plus grand et meilleur étage
 - Le QUARTIER influence les loyers: un bon quartier = loyers plus élevés
 - Donne des loyers RÉALISTES pour du neuf dans CE quartier spécifique, pas la moyenne générale d'Edmonton
-- En 2025-2026 à Edmonton, un basement 1BR neuf se loue typiquement entre 1000-1300$, un basement 2BR entre 1200-1500$, un upper 3BR entre 1600-2100$ selon le quartier
+- En 2025-2026 à Edmonton, pour des CONSTRUCTIONS NEUVES, les loyers typiques sont:
+  * Basement 1BR neuf: 1100-1400$ selon le quartier
+  * Basement 2BR neuf: 1300-1600$ selon le quartier  
+  * Upper level 3BR neuf: 2000-2400$ selon le quartier (c'est le plus grand et le plus demandé)
+  * Main floor 2BR neuf: 1400-1700$ selon le quartier
+- Ces fourchettes sont basées sur RentFaster.ca et Rentals.ca pour Edmonton en 2025-2026
+- Un upper 3BR neuf ne devrait JAMAIS être en dessous de 2000$/mois à Edmonton
 
 Réponds UNIQUEMENT avec du JSON valide:
 {

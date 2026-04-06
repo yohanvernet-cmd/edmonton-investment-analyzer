@@ -98,11 +98,22 @@ export interface FinancialMetrics {
   operatingExpenseRatio: number;
 }
 
+export interface MortgageComparison {
+  originalRate: number;
+  recommendedRate: number;
+  originalMonthlyPayment: number;
+  recommendedMonthlyPayment: number;
+  monthlyDifference: number;
+  annualDifference: number;
+  flag: boolean;
+}
+
 export interface RevisedProForma {
   original: FinancialMetrics;
   revised: FinancialMetrics;
   adjustedRevenue: number;
   adjustedExpenses: number;
+  mortgage: MortgageComparison;
 }
 
 export interface InvestmentScore {

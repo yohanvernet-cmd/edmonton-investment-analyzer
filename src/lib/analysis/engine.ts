@@ -29,6 +29,8 @@ function analyzeNeighborhood(address: string): NeighborhoodAnalysis {
       renterPercent: data.renterPercent,
       marketType: data.renterPercent > 50 ? 'Quartier de locataires' : 'Quartier de propriétaires',
       socioEconomic: data.socioEconomic,
+      medianIncome: undefined,
+      cityMedianIncome: undefined,
     },
     vacancy: {
       currentRate: data.vacancyRate,
@@ -137,25 +139,6 @@ function analyzeExpenses(proForma: ProFormaData, neighborhood: NeighborhoodAnaly
   const mins = EDMONTON_MARKET.minimums;
   const items: ExpenseAnalysis['items'] = [];
 
-  // Interest rate check (NOT included in expense totals — it affects debt service)
-  let interestRateFlag = false;
-  let interestRateImpact = 0;
-  if (proForma.loan.interestRate < mins.interestRate) {
-    const mr = (mins.interestRate / 100) / 12;
-    const n = proForma.loan.amortizationYears * 12;
-    const newPayment = proForma.loan.amount * (mr * Math.pow(1 + mr, n)) / (Math.pow(1 + mr, n) - 1);
-    interestRateImpact = Math.round((newPayment - proForma.loan.monthlyPayment) * 12);
-    interestRateFlag = true;
-    items.push({
-      category: 'Taux d\'intérêt',
-      projected: proForma.loan.interestRate,
-      recommended: mins.interestRate,
-      gapDollar: interestRateImpact,
-      impactOnNOI: -interestRateImpact,
-      flag: true,
-    });
-  }
-
   // Property tax
   const minTax = Math.round(salePrice * mins.propertyTaxRate);
   items.push({
@@ -263,26 +246,36 @@ function buildRevisedProForma(
   expenses: ExpenseAnalysis,
   neighborhood: NeighborhoodAnalysis,
 ): RevisedProForma {
+  const mins = EDMONTON_MARKET.minimums;
+
+  // Mortgage comparison
+  const originalMonthly = proForma.loan.monthlyPayment;
+  const recRate = Math.max(proForma.loan.interestRate, mins.interestRate);
+  const mr = (recRate / 100) / 12;
+  const n = proForma.loan.amortizationYears * 12;
+  const recommendedMonthly = proForma.loan.interestRate < mins.interestRate
+    ? Math.round(proForma.loan.amount * (mr * Math.pow(1 + mr, n)) / (Math.pow(1 + mr, n) - 1) * 100) / 100
+    : originalMonthly;
+  const mortgageFlag = proForma.loan.interestRate < mins.interestRate;
+
+  const mortgage = {
+    originalRate: proForma.loan.interestRate,
+    recommendedRate: recRate,
+    originalMonthlyPayment: originalMonthly,
+    recommendedMonthlyPayment: recommendedMonthly,
+    monthlyDifference: Math.round((recommendedMonthly - originalMonthly) * 100) / 100,
+    annualDifference: Math.round((recommendedMonthly - originalMonthly) * 12),
+    flag: mortgageFlag,
+  };
+
   const original = calculateMetrics(proForma, proForma.totalAnnualRevenue, proForma.expenses.totalAnnual);
-
-  // Adjusted revenue: use market rents
   const adjustedAnnualRevenue = revenue.totalMarketMonthly * 12;
-
-  // Adjusted expenses: use recommended values
   const adjustedAnnualExpenses = expenses.recommendedTotal;
-
-  // Recalculate loan payment if interest rate was adjusted
-  let adjustedDebtService = proForma.loan.monthlyPayment * 12;
-  const rateItem = expenses.items.find(i => i.category === 'Taux d\'intérêt');
-  if (rateItem && rateItem.flag) {
-    const mr = (rateItem.recommended / 100) / 12;
-    const n = proForma.loan.amortizationYears * 12;
-    adjustedDebtService = proForma.loan.amount * (mr * Math.pow(1 + mr, n)) / (Math.pow(1 + mr, n) - 1) * 12;
-  }
+  const adjustedDebtService = recommendedMonthly * 12;
 
   const revised = calculateMetrics(proForma, adjustedAnnualRevenue, adjustedAnnualExpenses, adjustedDebtService);
 
-  return { original, revised, adjustedRevenue: adjustedAnnualRevenue, adjustedExpenses: adjustedAnnualExpenses };
+  return { original, revised, adjustedRevenue: adjustedAnnualRevenue, adjustedExpenses: adjustedAnnualExpenses, mortgage };
 }
 
 function calculateMetrics(proForma: ProFormaData, annualRevenue: number, annualExpenses: number, debtService?: number): FinancialMetrics {

@@ -6,6 +6,7 @@ import { PropertySummary } from './PropertySummary';
 import { NeighborhoodCard } from '@/components/neighborhood/NeighborhoodCard';
 import { RevenueCard } from '@/components/analysis/RevenueCard';
 import { ExpenseCard } from '@/components/analysis/ExpenseCard';
+import { MortgageCard } from '@/components/analysis/MortgageCard';
 import { ProFormaComparison } from '@/components/proforma/ProFormaComparison';
 import { ExecutiveSummary } from './ExecutiveSummary';
 
@@ -48,6 +49,8 @@ export function Dashboard({ analysis, onReset }: Props) {
         <RevenueCard analysis={revenueAnalysis} />
         <ExpenseCard analysis={expenseAnalysis} />
       </div>
+
+      <MortgageCard mortgage={revisedProForma.mortgage} />
 
       <ProFormaComparison revised={revisedProForma} />
     </div>
