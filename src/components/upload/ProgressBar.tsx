@@ -1,9 +1,11 @@
 'use client';
 
 import { useAppStore } from '@/hooks/useAppStore';
+import { useT } from '@/hooks/useLang';
 
 export function ProgressBar() {
   const { progress, progressMessage } = useAppStore();
+  const t = useT();
 
   return (
     <div className="max-w-lg mx-auto card text-center">
