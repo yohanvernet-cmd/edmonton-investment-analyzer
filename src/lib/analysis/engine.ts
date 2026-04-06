@@ -122,19 +122,21 @@ function analyzeExpenses(proForma: ProFormaData, neighborhood: NeighborhoodAnaly
   const mins = EDMONTON_MARKET.minimums;
   const items: ExpenseAnalysis['items'] = [];
 
-  // Interest rate check
-  const recInterest = Math.max(proForma.loan.interestRate, mins.interestRate);
+  // Interest rate check (NOT included in expense totals — it affects debt service)
+  let interestRateFlag = false;
+  let interestRateImpact = 0;
   if (proForma.loan.interestRate < mins.interestRate) {
-    const mr = (recInterest / 100) / 12;
+    const mr = (mins.interestRate / 100) / 12;
     const n = proForma.loan.amortizationYears * 12;
     const newPayment = proForma.loan.amount * (mr * Math.pow(1 + mr, n)) / (Math.pow(1 + mr, n) - 1);
-    const diff = (newPayment - proForma.loan.monthlyPayment) * 12;
+    interestRateImpact = Math.round((newPayment - proForma.loan.monthlyPayment) * 12);
+    interestRateFlag = true;
     items.push({
       category: 'Taux d\'intérêt',
       projected: proForma.loan.interestRate,
       recommended: mins.interestRate,
-      gapDollar: Math.round(diff),
-      impactOnNOI: Math.round(-diff),
+      gapDollar: interestRateImpact,
+      impactOnNOI: -interestRateImpact,
       flag: true,
     });
   }
@@ -150,17 +152,19 @@ function analyzeExpenses(proForma: ProFormaData, neighborhood: NeighborhoodAnaly
     flag: expenses.propertyTax < minTax,
   });
 
-  // Vacancy
-  const recVacancy = Math.max(expenses.vacancy, mins.vacancyRate, neighborhood.vacancy.currentRate);
-  const projVacancyDollar = (expenses.vacancy / 100) * totalAnnualRevenue;
-  const recVacancyDollar = (recVacancy / 100) * totalAnnualRevenue;
+  // Vacancy — use dollar amount from pro forma if available
+  const projVacancyDollar = expenses.vacancyDollar > 0
+    ? expenses.vacancyDollar
+    : Math.round((expenses.vacancy / 100) * totalAnnualRevenue);
+  const recVacancyRate = Math.max(expenses.vacancy, mins.vacancyRate, neighborhood.vacancy.currentRate);
+  const recVacancyDollar = Math.round((recVacancyRate / 100) * totalAnnualRevenue);
   items.push({
     category: 'Vacance',
-    projected: Math.round(projVacancyDollar),
-    recommended: Math.round(recVacancyDollar),
-    gapDollar: Math.round(recVacancyDollar - projVacancyDollar),
-    impactOnNOI: Math.round(-(recVacancyDollar - projVacancyDollar)),
-    flag: expenses.vacancy < recVacancy,
+    projected: projVacancyDollar,
+    recommended: Math.max(projVacancyDollar, recVacancyDollar),
+    gapDollar: Math.round(Math.max(0, recVacancyDollar - projVacancyDollar)),
+    impactOnNOI: Math.round(-Math.max(0, recVacancyDollar - projVacancyDollar)),
+    flag: projVacancyDollar < recVacancyDollar,
   });
 
   // Insurance
@@ -174,22 +178,22 @@ function analyzeExpenses(proForma: ProFormaData, neighborhood: NeighborhoodAnaly
   });
 
   // Maintenance (min 5% of gross revenue)
-  const minMaint = totalAnnualRevenue * mins.maintenanceRate;
+  const minMaint = Math.round(totalAnnualRevenue * mins.maintenanceRate);
   items.push({
     category: 'Entretien et réparations',
     projected: expenses.maintenance,
-    recommended: Math.max(expenses.maintenance, Math.round(minMaint)),
+    recommended: Math.max(expenses.maintenance, minMaint),
     gapDollar: Math.round(Math.max(0, minMaint - expenses.maintenance)),
     impactOnNOI: Math.round(-Math.max(0, minMaint - expenses.maintenance)),
     flag: expenses.maintenance < minMaint,
   });
 
   // Capital reserve (min 5% of gross revenue)
-  const minCapex = totalAnnualRevenue * mins.capitalReserveRate;
+  const minCapex = Math.round(totalAnnualRevenue * mins.capitalReserveRate);
   items.push({
     category: 'Réserve pour dépenses en capital',
     projected: expenses.capitalReserve,
-    recommended: Math.max(expenses.capitalReserve, Math.round(minCapex)),
+    recommended: Math.max(expenses.capitalReserve, minCapex),
     gapDollar: Math.round(Math.max(0, minCapex - expenses.capitalReserve)),
     impactOnNOI: Math.round(-Math.max(0, minCapex - expenses.capitalReserve)),
     flag: expenses.capitalReserve < minCapex,
@@ -217,8 +221,10 @@ function analyzeExpenses(proForma: ProFormaData, neighborhood: NeighborhoodAnaly
     });
   }
 
-  const projectedTotal = items.reduce((s, i) => s + i.projected, 0);
-  const recommendedTotal = items.reduce((s, i) => s + i.recommended, 0);
+  // Calculate totals EXCLUDING interest rate row (it's not an operating expense)
+  const expenseItems = items.filter(i => i.category !== 'Taux d\'intérêt');
+  const projectedTotal = expenseItems.reduce((s, i) => s + i.projected, 0);
+  const recommendedTotal = expenseItems.reduce((s, i) => s + i.recommended, 0);
 
   return { items, projectedTotal, recommendedTotal };
 }
