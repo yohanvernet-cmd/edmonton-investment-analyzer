@@ -19,7 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <p className="text-xs text-slate-500">Edmonton, Alberta</p>
               </div>
             </div>
-            <span className="text-xs text-slate-400 font-mono">v1.4</span>
+            <span className="text-xs text-slate-400 font-mono">v1.5</span>
           </div>
         </header>
         <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>

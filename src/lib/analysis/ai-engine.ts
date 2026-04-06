@@ -75,7 +75,9 @@ Réponds UNIQUEMENT avec du JSON valide:
     "ownerPercent": number,
     "renterPercent": number,
     "marketType": "Quartier de locataires" | "Quartier de propriétaires" | "Quartier mixte",
-    "socioEconomic": "string"
+    "socioEconomic": "string",
+    "medianHouseholdIncome": number (revenu médian des ménages du quartier en $ CAD),
+    "edmontonMedianIncome": number (revenu médian des ménages d'Edmonton en $ CAD, environ 80000-90000)
   },
   "vacancy": { "currentRate": number, "trend": "string", "cityAverage": 4.3 },
   "marketRents": {

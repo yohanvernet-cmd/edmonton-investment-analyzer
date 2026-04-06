@@ -102,6 +102,8 @@ function mergeNeighborhoodData(base: NeighborhoodAnalysis, ai: any): Neighborhoo
       renterPercent: ai.demographics?.renterPercent ?? base.demographics.renterPercent,
       marketType: ai.demographics?.marketType ?? base.demographics.marketType,
       socioEconomic: ai.demographics?.socioEconomic ?? base.demographics.socioEconomic,
+      medianIncome: ai.demographics?.medianHouseholdIncome || undefined,
+      cityMedianIncome: ai.demographics?.edmontonMedianIncome || undefined,
     },
     vacancy: {
       currentRate: ai.vacancy?.currentRate ?? base.vacancy.currentRate,

@@ -27,6 +27,15 @@ export function NeighborhoodCard({ neighborhood }: { neighborhood: NeighborhoodA
             <div>Type: <span className="font-medium">{n.demographics.marketType}</span></div>
             <div>Propriétaires: {n.demographics.ownerPercent}% | Locataires: {n.demographics.renterPercent}%</div>
             <div>Profil: {n.demographics.socioEconomic}</div>
+            {n.demographics.medianIncome && (
+              <div>Revenu médian: <span className="font-medium">${n.demographics.medianIncome.toLocaleString('fr-CA')}</span>
+                {n.demographics.cityMedianIncome && (
+                  <span className={`text-xs ml-1 ${n.demographics.medianIncome >= n.demographics.cityMedianIncome ? 'text-green-600' : 'text-amber-600'}`}>
+                    ({n.demographics.medianIncome >= n.demographics.cityMedianIncome ? '↑' : '↓'} vs {n.demographics.cityMedianIncome.toLocaleString('fr-CA')}$ Edmonton)
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

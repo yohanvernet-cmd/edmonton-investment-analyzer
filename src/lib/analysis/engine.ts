@@ -119,8 +119,16 @@ function analyzeRevenue(proForma: ProFormaData, neighborhood: NeighborhoodAnalys
 
 function getAIMarketRent(configuration: string, bedrooms: number, aiRents?: Record<string, number>): number | null {
   if (!aiRents) return null;
+
+  // Try exact match first
   const key = `${configuration}_${bedrooms}br`;
-  return aiRents[key] || null;
+  if (aiRents[key]) return aiRents[key];
+
+  // Fallback: try matching by bedrooms only
+  if (bedrooms <= 2) return aiRents[`basement_${bedrooms}br`] || null;
+  if (bedrooms >= 3) return aiRents['upper_3br'] || null;
+
+  return null;
 }
 
 // ── 3. Expense Analysis ──

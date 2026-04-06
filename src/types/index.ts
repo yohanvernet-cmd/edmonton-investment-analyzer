@@ -44,7 +44,7 @@ export interface ExpenseBreakdown {
 
 // ── Neighborhood Analysis ──
 export interface NeighborhoodAnalysis {
-  demographics: { ownerPercent: number; renterPercent: number; marketType: string; socioEconomic: string };
+  demographics: { ownerPercent: number; renterPercent: number; marketType: string; socioEconomic: string; medianIncome?: number; cityMedianIncome?: number };
   vacancy: { currentRate: number; historicalTrend: { year: number; rate: number }[]; cityAverage: number };
   marketRents: MarketRent[];
   safety: { crimeRate: number; cityAverage: number; predominantCrimes: string[]; trend: string };
