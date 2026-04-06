@@ -4,9 +4,9 @@ import type {
 } from '@/types';
 import { EDMONTON_MARKET, getNeighborhoodData, getMarketRent, getMarketRentLabel } from '@/lib/data/edmonton-market';
 
-export function runFullAnalysis(proForma: ProFormaData): FullAnalysis {
+export function runFullAnalysis(proForma: ProFormaData, aiMarketRents?: Record<string, number>): FullAnalysis {
   const neighborhood = analyzeNeighborhood(proForma.address);
-  const revenueAnalysis = analyzeRevenue(proForma, neighborhood);
+  const revenueAnalysis = analyzeRevenue(proForma, neighborhood, aiMarketRents);
   const expenseAnalysis = analyzeExpenses(proForma, neighborhood);
   const revisedProForma = buildRevisedProForma(proForma, revenueAnalysis, expenseAnalysis, neighborhood);
   const investmentScore = scoreInvestment(proForma, neighborhood, revenueAnalysis, expenseAnalysis, revisedProForma);
@@ -94,10 +94,11 @@ function generateScoreJustification(score: number, data: any): string {
 }
 
 // ── 2. Revenue Analysis ──
-function analyzeRevenue(proForma: ProFormaData, neighborhood: NeighborhoodAnalysis): RevenueAnalysis {
+function analyzeRevenue(proForma: ProFormaData, neighborhood: NeighborhoodAnalysis, aiMarketRents?: Record<string, number>): RevenueAnalysis {
   const units = proForma.units.map(u => {
-    const marketRent = getMarketRent(u.configuration, u.bedrooms);
-    // Exclude parking and pet fees from comparison
+    // Use AI market rents if available, otherwise fall back to static data
+    const marketRent = getAIMarketRent(u.configuration, u.bedrooms, aiMarketRents)
+      || getMarketRent(u.configuration, u.bedrooms);
     const projectedRent = u.monthlyRent;
     const gapDollar = projectedRent - marketRent;
     const gapPercent = marketRent > 0 ? (gapDollar / marketRent) * 100 : 0;
@@ -114,6 +115,12 @@ function analyzeRevenue(proForma: ProFormaData, neighborhood: NeighborhoodAnalys
     totalProjectedMonthly: units.reduce((s, u) => s + u.projectedRent, 0),
     totalMarketMonthly: units.reduce((s, u) => s + u.marketRent, 0),
   };
+}
+
+function getAIMarketRent(configuration: string, bedrooms: number, aiRents?: Record<string, number>): number | null {
+  if (!aiRents) return null;
+  const key = `${configuration}_${bedrooms}br`;
+  return aiRents[key] || null;
 }
 
 // ── 3. Expense Analysis ──

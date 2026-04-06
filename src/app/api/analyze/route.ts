@@ -46,8 +46,14 @@ export async function POST(req: NextRequest) {
     await new Promise(r => setTimeout(r, 2000));
     const aiNeighborhood = await analyzeNeighborhoodWithAI(proForma.address, apiKey);
 
-    // Step 4: Run financial analysis (deterministic calculations)
-    const analysis = runFullAnalysis(proForma);
+    // Step 4: Run financial analysis using AI market rents
+    const aiMarketRents = aiNeighborhood?.marketRents ? {
+      basement_1br: aiNeighborhood.marketRents.basement_1br,
+      basement_2br: aiNeighborhood.marketRents.basement_2br,
+      upper_3br: aiNeighborhood.marketRents.upper_3br,
+      main_2br: aiNeighborhood.marketRents.main_2br,
+    } : undefined;
+    const analysis = runFullAnalysis(proForma, aiMarketRents);
 
     // Override neighborhood with AI data
     analysis.neighborhood = mergeNeighborhoodData(analysis.neighborhood, aiNeighborhood);
@@ -103,9 +109,9 @@ function mergeNeighborhoodData(base: NeighborhoodAnalysis, ai: any): Neighborhoo
       cityAverage: ai.vacancy?.cityAverage ?? base.vacancy.cityAverage,
     },
     marketRents: ai.marketRents ? [
-      { unitType: 'Sous-sol 1 ch.', bedrooms: 1, configuration: 'basement', averageRent: ai.marketRents.basement_1br || 950, source: 'IA + CMHC' },
-      { unitType: 'Sous-sol 2 ch.', bedrooms: 2, configuration: 'basement', averageRent: ai.marketRents.basement_2br || 1150, source: 'IA + CMHC' },
-      { unitType: 'Étage sup. 3 ch.', bedrooms: 3, configuration: 'upper', averageRent: ai.marketRents.upper_3br || 1650, source: 'IA + CMHC' },
+      { unitType: 'Sous-sol 1 ch. (neuf)', bedrooms: 1, configuration: 'basement', averageRent: ai.marketRents.basement_1br || 950, source: 'RentFaster / Rentals.ca' },
+      { unitType: 'Sous-sol 2 ch. (neuf)', bedrooms: 2, configuration: 'basement', averageRent: ai.marketRents.basement_2br || 1150, source: 'RentFaster / Rentals.ca' },
+      { unitType: 'Étage sup. 3 ch. (neuf)', bedrooms: 3, configuration: 'upper', averageRent: ai.marketRents.upper_3br || 1650, source: 'RentFaster / Rentals.ca' },
     ] : base.marketRents,
     safety: {
       crimeRate: ai.safety?.crimeIndex ?? base.safety.crimeRate,

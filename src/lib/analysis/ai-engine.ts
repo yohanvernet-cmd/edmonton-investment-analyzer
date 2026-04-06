@@ -56,9 +56,17 @@ Réponds UNIQUEMENT avec du JSON valide, sans markdown, sans explication.
   }
 }`;
 
-const NEIGHBORHOOD_PROMPT = `Tu es un expert en immobilier à Edmonton, Alberta. On te donne une adresse.
+const NEIGHBORHOOD_PROMPT = `Tu es un expert en immobilier locatif à Edmonton, Alberta. On te donne une adresse.
 Fournis une analyse détaillée du quartier pour un investisseur locatif.
-Utilise tes connaissances sur Edmonton pour fournir des données RÉALISTES.
+
+POUR LES LOYERS DU MARCHÉ — C'EST CRITIQUE:
+- Base-toi sur les prix actuels de RentFaster.ca, Rentals.ca, Zumper et Kijiji pour Edmonton
+- Ce sont des CONSTRUCTIONS NEUVES (new builds), donc les loyers sont PLUS ÉLEVÉS que la moyenne
+- Les 1-2 chambres sont en SOUS-SOL (basement suites) — légèrement moins cher qu'un appartement standard mais c'est du neuf donc bien fini
+- Les 3 chambres sont à l'ÉTAGE SUPÉRIEUR (upper level) — plus cher car plus grand et meilleur étage
+- Le QUARTIER influence les loyers: un bon quartier = loyers plus élevés
+- Donne des loyers RÉALISTES pour du neuf dans CE quartier spécifique, pas la moyenne générale d'Edmonton
+- En 2025-2026 à Edmonton, un basement 1BR neuf se loue typiquement entre 1000-1300$, un basement 2BR entre 1200-1500$, un upper 3BR entre 1600-2100$ selon le quartier
 
 Réponds UNIQUEMENT avec du JSON valide:
 {
@@ -70,7 +78,12 @@ Réponds UNIQUEMENT avec du JSON valide:
     "socioEconomic": "string"
   },
   "vacancy": { "currentRate": number, "trend": "string", "cityAverage": 4.3 },
-  "marketRents": { "basement_1br": number, "basement_2br": number, "upper_3br": number, "main_2br": number },
+  "marketRents": {
+    "basement_1br": number (loyer mensuel réaliste pour un sous-sol 1 chambre NEUF dans CE quartier),
+    "basement_2br": number (loyer mensuel réaliste pour un sous-sol 2 chambres NEUF dans CE quartier),
+    "upper_3br": number (loyer mensuel réaliste pour un étage supérieur 3 chambres NEUF dans CE quartier),
+    "main_2br": number (loyer mensuel réaliste pour un rez-de-chaussée 2 chambres NEUF dans CE quartier)
+  },
   "safety": { "crimeIndex": number, "predominantCrimes": ["string"], "trend": "string" },
   "accessibility": { "walkScore": number, "transitScore": number, "nearestLRT": "string", "nearestGrocery": "string", "highwayAccess": "string" },
   "overallScore": number,
