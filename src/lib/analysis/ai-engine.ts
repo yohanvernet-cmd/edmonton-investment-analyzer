@@ -25,6 +25,7 @@ Réponds UNIQUEMENT avec du JSON valide, sans markdown, sans explication.
   "salePrice": number,
   "numberOfUnits": number,
   "address": "string complète incluant ville et province",
+  "neighborhood": "string — le quartier PRÉCIS (sub-neighborhood) d'Edmonton où se trouve cette adresse. Utilise tes connaissances de Google Maps / Edmonton neighborhoods. Par exemple pour 2350 Millbourne Rd le quartier précis est Tweddle Place (pas Mill Woods qui est trop large). Cherche toujours le quartier le plus petit et précis possible.",
   "units": [
     {
       "type": "description lisible de l'unité",
@@ -252,6 +253,7 @@ export async function extractWithAI(content: string, apiKey: string): Promise<Pr
     salePrice,
     numberOfUnits: parsed.numberOfUnits || units.length,
     address: parsed.address || 'Adresse non trouvée',
+    aiNeighborhood: parsed.neighborhood || undefined,
     units,
     totalMonthlyRevenue,
     totalAnnualRevenue,

@@ -20,6 +20,7 @@ export interface ProFormaData {
   salePrice: number;
   numberOfUnits: number;
   address: string;
+  aiNeighborhood?: string;
   units: UnitDetail[];
   totalMonthlyRevenue: number;
   totalAnnualRevenue: number;

@@ -59,8 +59,14 @@ export async function POST(req: NextRequest) {
     // Override neighborhood with AI data
     analysis.neighborhood = mergeNeighborhoodData(analysis.neighborhood, aiNeighborhood);
 
-    // Look up custom neighborhood ranking (address > document content > filename)
-    const customRanking = findNeighborhoodFromSources(proForma.address, textContent, file.name);
+    // Look up custom neighborhood ranking
+    // Priority: AI-identified precise neighborhood > address > document content > filename
+    const customRanking = findNeighborhoodFromSources(
+      proForma.aiNeighborhood || '',  // AI's precise sub-neighborhood (e.g. "Tweddle Place")
+      proForma.address,                // Full address
+      textContent,                     // Document content
+      file.name                        // Filename
+    );
     if (customRanking) {
       analysis.neighborhood.customRanking = {
         name: customRanking.name, sector: customRanking.sector,

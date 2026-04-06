@@ -292,11 +292,22 @@ export const NEIGHBORHOOD_RANKINGS: Record<string, NeighborhoodRanking> = {
 
 /**
  * Search for a neighborhood across multiple text sources.
- * Priority: address > document content > filename.
+ * Priority: AI neighborhood > address > document content > filename.
  * Within each source, prefer the longest match (most specific = sub-neighborhood).
  */
-export function findNeighborhoodFromSources(address: string, documentText?: string, fileName?: string): NeighborhoodRanking | null {
-  // Try address first (most precise)
+export function findNeighborhoodFromSources(
+  aiNeighborhood: string,
+  address: string,
+  documentText?: string,
+  fileName?: string,
+): NeighborhoodRanking | null {
+  // Try AI-identified precise neighborhood first
+  if (aiNeighborhood) {
+    const fromAI = findBestMatch(aiNeighborhood);
+    if (fromAI) return fromAI;
+  }
+
+  // Then address
   const fromAddress = findBestMatch(address);
   if (fromAddress) return fromAddress;
 
