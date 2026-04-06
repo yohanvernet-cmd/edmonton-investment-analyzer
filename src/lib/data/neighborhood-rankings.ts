@@ -290,11 +290,47 @@ export const NEIGHBORHOOD_RANKINGS: Record<string, NeighborhoodRanking> = {
   "boyle street": {"name":"Boyle Street","altNames":"—","parent":"Central Core","sector":"Mature","ra":3,"rd":5,"vr":4,"ts":2,"id":3,"score":3.4,"tier":"★","ranking":272}
 };
 
-export function findNeighborhood(address: string): NeighborhoodRanking | null {
-  const lower = address.toLowerCase();
-  // Try exact neighborhood name match
-  for (const [key, data] of Object.entries(NEIGHBORHOOD_RANKINGS)) {
-    if (lower.includes(key) && key.length > 3) return data;
+/**
+ * Search for a neighborhood across multiple text sources.
+ * Priority: address > document content > filename.
+ * Within each source, prefer the longest match (most specific = sub-neighborhood).
+ */
+export function findNeighborhoodFromSources(address: string, documentText?: string, fileName?: string): NeighborhoodRanking | null {
+  // Try address first (most precise)
+  const fromAddress = findBestMatch(address);
+  if (fromAddress) return fromAddress;
+
+  // Then document content
+  if (documentText) {
+    const fromDoc = findBestMatch(documentText);
+    if (fromDoc) return fromDoc;
   }
+
+  // Then filename
+  if (fileName) {
+    const fromFile = findBestMatch(fileName);
+    if (fromFile) return fromFile;
+  }
+
   return null;
+}
+
+function findBestMatch(text: string): NeighborhoodRanking | null {
+  const lower = text.toLowerCase();
+  let bestMatch: NeighborhoodRanking | null = null;
+  let bestKeyLength = 0;
+
+  for (const [key, data] of Object.entries(NEIGHBORHOOD_RANKINGS)) {
+    if (key.length > 3 && lower.includes(key) && key.length > bestKeyLength) {
+      bestMatch = data;
+      bestKeyLength = key.length;
+    }
+  }
+
+  return bestMatch;
+}
+
+/** @deprecated Use findNeighborhoodFromSources instead */
+export function findNeighborhood(address: string): NeighborhoodRanking | null {
+  return findBestMatch(address);
 }

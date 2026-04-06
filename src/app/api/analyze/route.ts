@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { excelToText } from '@/lib/parsers/excel-to-text';
 import { extractWithAI, analyzeNeighborhoodWithAI, generateSmartSummary } from '@/lib/analysis/ai-engine';
 import { runFullAnalysis } from '@/lib/analysis/engine';
-import { findNeighborhood } from '@/lib/data/neighborhood-rankings';
+import { findNeighborhoodFromSources } from '@/lib/data/neighborhood-rankings';
 import type { NeighborhoodAnalysis } from '@/types';
 
 export async function POST(req: NextRequest) {
@@ -33,8 +33,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Le fichier semble vide ou illisible.' }, { status: 422 });
     }
 
-    // Step 2: AI extracts structured data from raw text
-    const proForma = await extractWithAI(textContent, apiKey);
+    // Step 2: AI extracts structured data from raw text (include filename for context)
+    const proForma = await extractWithAI(`Nom du fichier: ${file.name}\n\n${textContent}`, apiKey);
 
     if (!proForma.salePrice || !proForma.numberOfUnits) {
       return NextResponse.json({
@@ -59,8 +59,8 @@ export async function POST(req: NextRequest) {
     // Override neighborhood with AI data
     analysis.neighborhood = mergeNeighborhoodData(analysis.neighborhood, aiNeighborhood);
 
-    // Look up custom neighborhood ranking
-    const customRanking = findNeighborhood(proForma.address);
+    // Look up custom neighborhood ranking (address > document content > filename)
+    const customRanking = findNeighborhoodFromSources(proForma.address, textContent, file.name);
     if (customRanking) {
       analysis.neighborhood.customRanking = {
         name: customRanking.name, sector: customRanking.sector,
