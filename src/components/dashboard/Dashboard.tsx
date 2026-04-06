@@ -50,7 +50,9 @@ export function Dashboard({ analysis, onReset }: Props) {
         <ExpenseCard analysis={expenseAnalysis} />
       </div>
 
-      <MortgageCard mortgage={revisedProForma.mortgage} />
+      {revisedProForma.mortgage && (
+        <MortgageCard mortgage={revisedProForma.mortgage} />
+      )}
 
       <ProFormaComparison revised={revisedProForma} />
     </div>

@@ -4,6 +4,9 @@ import type { NeighborhoodAnalysis } from '@/types';
 
 export function NeighborhoodCard({ neighborhood }: { neighborhood: NeighborhoodAnalysis }) {
   const n = neighborhood;
+  const income = n.demographics.medianIncome;
+  const cityIncome = n.demographics.cityMedianIncome;
+  const incomeAbove = income && cityIncome ? income >= cityIncome : null;
 
   return (
     <div className="card">
@@ -27,15 +30,6 @@ export function NeighborhoodCard({ neighborhood }: { neighborhood: NeighborhoodA
             <div>Type: <span className="font-medium">{n.demographics.marketType}</span></div>
             <div>Propriétaires: {n.demographics.ownerPercent}% | Locataires: {n.demographics.renterPercent}%</div>
             <div>Profil: {n.demographics.socioEconomic}</div>
-            {n.demographics.medianIncome && (
-              <div>Revenu médian: <span className="font-medium">${n.demographics.medianIncome.toLocaleString('fr-CA')}</span>
-                {n.demographics.cityMedianIncome && (
-                  <span className={`text-xs ml-1 ${n.demographics.medianIncome >= n.demographics.cityMedianIncome ? 'text-green-600' : 'text-amber-600'}`}>
-                    ({n.demographics.medianIncome >= n.demographics.cityMedianIncome ? '↑' : '↓'} vs {n.demographics.cityMedianIncome.toLocaleString('fr-CA')}$ Edmonton)
-                  </span>
-                )}
-              </div>
-            )}
           </div>
         </div>
 
@@ -63,6 +57,28 @@ export function NeighborhoodCard({ neighborhood }: { neighborhood: NeighborhoodA
           </div>
         </div>
 
+        {/* Median Income */}
+        <div>
+          <h4 className="text-sm font-medium text-slate-700 mb-2">💵 Revenu médian</h4>
+          <div className="space-y-1 text-sm text-slate-600">
+            {income ? (
+              <>
+                <div>Quartier: <span className="font-medium">{income.toLocaleString('fr-CA')} $</span></div>
+                {cityIncome && (
+                  <>
+                    <div>Edmonton: <span className="font-medium">{cityIncome.toLocaleString('fr-CA')} $</span></div>
+                    <div className={`font-medium ${incomeAbove ? 'text-green-600' : 'text-amber-600'}`}>
+                      {incomeAbove ? '↑' : '↓'} {Math.abs(Math.round(((income - cityIncome) / cityIncome) * 100))}% vs moyenne Edmonton
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <div className="text-slate-400">Données non disponibles</div>
+            )}
+          </div>
+        </div>
+
         {/* Market Rents */}
         <div>
           <h4 className="text-sm font-medium text-slate-700 mb-2">💰 Loyers moyens du marché</h4>
@@ -70,7 +86,7 @@ export function NeighborhoodCard({ neighborhood }: { neighborhood: NeighborhoodA
             {n.marketRents.map(r => (
               <div key={r.unitType} className="flex justify-between">
                 <span>{r.unitType}</span>
-                <span className="font-medium">${r.averageRent}/mois</span>
+                <span className="font-medium">{r.averageRent} $/mois</span>
               </div>
             ))}
             <div className="text-xs text-slate-400 mt-1">Source: {n.marketRents[0]?.source}</div>
