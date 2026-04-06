@@ -18,7 +18,8 @@ export function Simulator({ analysis, onRecalculate }: Props) {
   const [downPayment, setDownPayment] = useState(pf.downPayment);
 
   function handleRecalculate() {
-    const loanAmount = salePrice - downPayment;
+    const cmhc = pf.loan.cmhcInsurance || 0;
+    const loanAmount = (salePrice - downPayment) + cmhc;
     const mr = (interestRate / 100) / 12;
     const n = pf.loan.amortizationYears * 12;
     const monthlyPayment = loanAmount * (mr * Math.pow(1 + mr, n)) / (Math.pow(1 + mr, n) - 1);
