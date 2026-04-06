@@ -13,9 +13,11 @@ RÈGLES CRITIQUES:
 - Pour la vacance (vacancy): elle peut être exprimée en DOLLARS ANNUELS ou en POURCENTAGE. Retourne LES DEUX si possible.
 - Pour TOUTES les dépenses: retourne le montant ANNUEL en dollars. Si le pro forma donne un montant mensuel, multiplie par 12.
 - Si une dépense est exprimée en pourcentage, convertis-la en dollars en utilisant le revenu brut annuel.
+- UNITÉS: Tu DOIS extraire CHAQUE unité individuellement. Un immeuble de 8 unités doit avoir 8 entrées dans le tableau "units". Cherche toutes les lignes qui mentionnent un loyer, un appartement, une suite, un unit, un logement. Ne regroupe JAMAIS les unités.
 - Identifie chaque unité séparément avec son type (sous-sol/basement, étage supérieur/upper, rez-de-chaussée/main)
 - Sépare les frais de stationnement et animaux des loyers de base
 - Le nombre de chambres (bedrooms) doit être un entier (1, 2, 3, etc.)
+- Si le document indique "numberOfUnits" ou un nombre total d'unités, assure-toi que le tableau "units" contient EXACTEMENT ce nombre d'entrées.
 
 Réponds UNIQUEMENT avec du JSON valide, sans markdown, sans explication.
 
@@ -157,7 +159,8 @@ function fixExpenseAmount(value: number, annualRevenue: number): number {
 export async function extractWithAI(content: string, apiKey: string): Promise<ProFormaData> {
   const parsed = await callGemini(EXTRACTION_PROMPT, `Voici le contenu du pro forma:\n\n${content}`, apiKey);
 
-  const units = (parsed.units || []).map((u: any) => ({
+  const declaredUnits = parsed.numberOfUnits || 0;
+  let units = (parsed.units || []).map((u: any) => ({
     type: u.type || 'Unknown',
     bedrooms: u.bedrooms || 2,
     configuration: u.configuration || 'unknown',
@@ -165,6 +168,27 @@ export async function extractWithAI(content: string, apiKey: string): Promise<Pr
     parkingFee: u.parkingFee || 0,
     petFee: u.petFee || 0,
   }));
+
+  // If AI found fewer units than declared, retry with a more specific prompt
+  if (declaredUnits > 0 && units.length < declaredUnits) {
+    console.warn(`AI extracted ${units.length} units but pro forma declares ${declaredUnits}. Retrying...`);
+    const retryParsed = await callGemini(
+      EXTRACTION_PROMPT + `\n\nATTENTION: Ce pro forma contient ${declaredUnits} unités. Tu DOIS retourner exactement ${declaredUnits} entrées dans le tableau "units". Cherche TOUTES les lignes avec des loyers.`,
+      `Voici le contenu du pro forma:\n\n${content}`,
+      apiKey
+    );
+    const retryUnits = (retryParsed.units || []).map((u: any) => ({
+      type: u.type || 'Unknown',
+      bedrooms: u.bedrooms || 2,
+      configuration: u.configuration || 'unknown',
+      monthlyRent: u.monthlyRent || 0,
+      parkingFee: u.parkingFee || 0,
+      petFee: u.petFee || 0,
+    }));
+    if (retryUnits.length > units.length) {
+      units = retryUnits;
+    }
+  }
 
   const salePrice = parsed.salePrice || 0;
   const loanAmount = parsed.loan?.amount || salePrice * 0.8;
