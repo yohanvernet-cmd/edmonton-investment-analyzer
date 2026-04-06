@@ -18,15 +18,9 @@ export function Simulator({ analysis, onRecalculate }: Props) {
   const [downPayment, setDownPayment] = useState(pf.downPayment);
 
   function handleRecalculate() {
-    // Recalculate CMHC premium based on LTV ratio
+    // CMHC premium: fixed 5.8% of base loan
     const baseLoan = salePrice - downPayment;
-    const ltv = baseLoan / salePrice;
-    let cmhc = 0;
-    if (ltv > 0.80) {
-      // CMHC premium rates: 80.01-85% = 2.8%, 85.01-90% = 3.1%, 90.01-95% = 4.0%
-      const cmhcRate = ltv <= 0.85 ? 0.028 : ltv <= 0.90 ? 0.031 : 0.04;
-      cmhc = Math.round(baseLoan * cmhcRate);
-    }
+    const cmhc = Math.round(baseLoan * 0.058);
     const loanAmount = baseLoan + cmhc;
     const mr = (interestRate / 100) / 12;
     const n = pf.loan.amortizationYears * 12;
