@@ -23,13 +23,19 @@ export function Dashboard({ analysis: initial, onReset }: Props) {
   const { proForma, neighborhood, revenueAnalysis, expenseAnalysis, revisedProForma, investmentScore } = analysis;
 
   const handleRecalculate = useCallback((updatedProForma: ProFormaData) => {
-    const result = recalculate(updatedProForma, analysis.neighborhood, analysis.aiMarketRents);
+    // Override market rents with simulator rents so revised pro forma uses user's values
+    const overrideRents: Record<string, number> = {};
+    updatedProForma.units.forEach(u => {
+      const key = `${u.configuration}_${u.bedrooms}br`;
+      overrideRents[key] = u.monthlyRent;
+    });
+    const result = recalculate(updatedProForma, analysis.neighborhood, overrideRents);
     setAnalysis(prev => ({
       ...prev,
       ...result,
       timestamp: new Date().toISOString(),
     }));
-  }, [analysis.neighborhood, analysis.aiMarketRents]);
+  }, [analysis.neighborhood]);
 
   return (
     <div className="space-y-6">
