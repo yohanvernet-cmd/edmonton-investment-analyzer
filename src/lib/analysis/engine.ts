@@ -305,31 +305,31 @@ function scoreInvestment(
 ): InvestmentScore {
   const breakdown: InvestmentScore['breakdown'] = [];
 
-  // Price per unit (20 pts)
+  // Price per unit (30 pts)
   const ppu = revised.original.pricePerUnit;
   const ppuRating = getPricePerUnitRating(ppu);
-  const ppuScore = ppu <= 250000 ? 20 : ppu <= 275000 ? 15 : ppu <= 300000 ? 8 : 3;
-  breakdown.push({ category: 'Prix par unité', score: ppuScore, maxScore: 20, details: `${fmt(ppu)}/unité — ${ppuRating.label}` });
+  const ppuScore = ppu <= 250000 ? 30 : ppu <= 275000 ? 22 : ppu <= 300000 ? 12 : 4;
+  breakdown.push({ category: 'Prix par unité', score: ppuScore, maxScore: 30, details: `${fmt(ppu)}/unité — ${ppuRating.label}` });
 
-  // Neighborhood (25 pts)
-  const nScore = Math.round((neighborhood.overallScore / 10) * 25);
-  breakdown.push({ category: 'Qualité du quartier', score: nScore, maxScore: 25, details: `Score quartier: ${neighborhood.overallScore}/10` });
+  // Neighborhood (30 pts)
+  const nScore = Math.round((neighborhood.overallScore / 10) * 30);
+  breakdown.push({ category: 'Qualité du quartier', score: nScore, maxScore: 30, details: `Score quartier: ${neighborhood.overallScore}/10` });
 
-  // Revenue realism (20 pts)
+  // Financial return (30 pts)
+  const cocr = revised.revised.cashOnCashReturn;
+  const finScore = cocr >= 10 ? 30 : cocr >= 7 ? 24 : cocr >= 4 ? 18 : cocr >= 1 ? 10 : cocr >= 0 ? 5 : 0;
+  breakdown.push({ category: 'Rendement financier ajusté', score: finScore, maxScore: 30, details: `Cash-on-cash ajusté: ${cocr}%` });
+
+  // Revenue realism (5 pts)
   const highRiskUnits = revenue.units.filter(u => u.alert === 'high_risk').length;
   const optimisticUnits = revenue.units.filter(u => u.alert === 'optimistic').length;
-  const revScore = Math.max(0, 20 - highRiskUnits * 8 - optimisticUnits * 4);
-  breakdown.push({ category: 'Réalisme des revenus', score: revScore, maxScore: 20, details: `${highRiskUnits} unité(s) à risque élevé, ${optimisticUnits} optimiste(s)` });
+  const revScore = Math.max(0, 5 - highRiskUnits * 2 - optimisticUnits * 1);
+  breakdown.push({ category: 'Réalisme des revenus', score: revScore, maxScore: 5, details: `${highRiskUnits} unité(s) à risque élevé, ${optimisticUnits} optimiste(s)` });
 
-  // Expense realism (20 pts)
+  // Expense realism (5 pts)
   const flaggedExpenses = expenses.items.filter(i => i.flag).length;
-  const expScore = Math.max(0, 20 - flaggedExpenses * 4);
-  breakdown.push({ category: 'Réalisme des dépenses', score: expScore, maxScore: 20, details: `${flaggedExpenses} catégorie(s) sous-estimée(s)` });
-
-  // Financial return (15 pts)
-  const cocr = revised.revised.cashOnCashReturn;
-  const finScore = cocr >= 10 ? 15 : cocr >= 7 ? 12 : cocr >= 4 ? 9 : cocr >= 1 ? 6 : cocr >= 0 ? 3 : 0;
-  breakdown.push({ category: 'Rendement financier ajusté', score: finScore, maxScore: 15, details: `Cash-on-cash ajusté: ${cocr}%` });
+  const expScore = Math.max(0, 5 - flaggedExpenses * 1);
+  breakdown.push({ category: 'Réalisme des dépenses', score: expScore, maxScore: 5, details: `${flaggedExpenses} catégorie(s) sous-estimée(s)` });
 
   const total = breakdown.reduce((s, b) => s + b.score, 0);
 
