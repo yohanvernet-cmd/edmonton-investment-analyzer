@@ -3,15 +3,16 @@
 import type { ProFormaData, RevisedProForma } from '@/types';
 import { formatCurrency } from '@/lib/utils/format';
 import { EDMONTON_MARKET } from '@/lib/data/edmonton-market';
+import { getPricePerUnitRating } from '@/lib/analysis/engine';
 
 export function PropertySummary({ proForma, metrics }: { proForma: ProFormaData; metrics: RevisedProForma }) {
   const ppu = metrics.original.pricePerUnit;
-  const ppuDiff = ((ppu - EDMONTON_MARKET.averagePricePerUnit) / EDMONTON_MARKET.averagePricePerUnit) * 100;
+  const ppuRating = getPricePerUnitRating(ppu);
 
   const items = [
     { label: 'Prix de vente', value: formatCurrency(proForma.salePrice) },
     { label: 'Nombre d\'unités', value: String(proForma.numberOfUnits) },
-    { label: 'Prix par unité', value: formatCurrency(ppu), sub: `${ppuDiff >= 0 ? '+' : ''}${ppuDiff.toFixed(1)}% vs marché` },
+    { label: 'Prix par unité', value: formatCurrency(ppu), sub: `${ppuRating.emoji} ${ppuRating.label}` },
     { label: 'Mise de fonds', value: formatCurrency(proForma.downPayment) },
     { label: 'Prêt hypothécaire', value: formatCurrency(proForma.loan.amount), sub: `${proForma.loan.interestRate}% / ${proForma.loan.amortizationYears} ans` },
     { label: 'Paiement mensuel', value: formatCurrency(proForma.loan.monthlyPayment) },

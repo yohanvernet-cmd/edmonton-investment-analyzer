@@ -281,9 +281,9 @@ function scoreInvestment(
 
   // Price per unit (20 pts)
   const ppu = revised.original.pricePerUnit;
-  const ppuRatio = ppu / EDMONTON_MARKET.averagePricePerUnit;
-  const ppuScore = ppuRatio <= 0.8 ? 20 : ppuRatio <= 1.0 ? 16 : ppuRatio <= 1.2 ? 12 : ppuRatio <= 1.5 ? 8 : 4;
-  breakdown.push({ category: 'Prix par unité', score: ppuScore, maxScore: 20, details: `${fmt(ppu)}/unité vs ${fmt(EDMONTON_MARKET.averagePricePerUnit)} moyenne` });
+  const ppuRating = getPricePerUnitRating(ppu);
+  const ppuScore = ppu <= 250000 ? 20 : ppu <= 275000 ? 15 : ppu <= 300000 ? 8 : 3;
+  breakdown.push({ category: 'Prix par unité', score: ppuScore, maxScore: 20, details: `${fmt(ppu)}/unité — ${ppuRating.label}` });
 
   // Neighborhood (25 pts)
   const nScore = Math.round((neighborhood.overallScore / 10) * 25);
@@ -359,6 +359,13 @@ function generateOpportunities(p: ProFormaData, n: NeighborhoodAnalysis, rv: Rev
   o.push('Optimisation des revenus par ajout de stationnement/buanderie');
   o.push('Réduction des dépenses par gestion directe');
   return o.slice(0, 5);
+}
+
+export function getPricePerUnitRating(ppu: number): { label: string; color: string; emoji: string } {
+  if (ppu <= 250000) return { label: 'Excellent prix', color: 'text-green-600 bg-green-50', emoji: '🟢' };
+  if (ppu <= 275000) return { label: 'Bon prix', color: 'text-lime-600 bg-lime-50', emoji: '🟡' };
+  if (ppu <= 300000) return { label: 'Dispendieux', color: 'text-amber-600 bg-amber-50', emoji: '🟠' };
+  return { label: 'Trop dispendieux', color: 'text-red-600 bg-red-50', emoji: '🔴' };
 }
 
 function fmt(n: number): string {
