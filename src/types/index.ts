@@ -135,6 +135,7 @@ export interface FullAnalysis {
   revisedProForma: RevisedProForma;
   investmentScore: InvestmentScore;
   timestamp: string;
+  aiMarketRents?: Record<string, number>;
 }
 
 // ── App State ──

@@ -17,6 +17,19 @@ export function runFullAnalysis(proForma: ProFormaData, aiMarketRents?: Record<s
   };
 }
 
+/** Recalculate everything from modified proForma, reusing existing neighborhood */
+export function recalculate(
+  proForma: ProFormaData,
+  neighborhood: NeighborhoodAnalysis,
+  aiMarketRents?: Record<string, number>,
+): Omit<FullAnalysis, 'timestamp'> {
+  const revenueAnalysis = analyzeRevenue(proForma, neighborhood, aiMarketRents);
+  const expenseAnalysis = analyzeExpenses(proForma, neighborhood);
+  const revisedProForma = buildRevisedProForma(proForma, revenueAnalysis, expenseAnalysis, neighborhood);
+  const investmentScore = scoreInvestment(proForma, neighborhood, revenueAnalysis, expenseAnalysis, revisedProForma);
+  return { proForma, neighborhood, revenueAnalysis, expenseAnalysis, revisedProForma, investmentScore };
+}
+
 // ── 1. Neighborhood Analysis ──
 function analyzeNeighborhood(address: string): NeighborhoodAnalysis {
   const data = getNeighborhoodData(address);

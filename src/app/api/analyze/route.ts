@@ -77,6 +77,7 @@ export async function POST(req: NextRequest) {
     // Add executive summary and negotiation tips to response
     (analysis as any).executiveSummary = aiSummary.executiveSummary || '';
     (analysis as any).negotiationTips = aiSummary.negotiationTips || [];
+    (analysis as any).aiMarketRents = aiMarketRents;
 
     return NextResponse.json(analysis);
   } catch (err: any) {
