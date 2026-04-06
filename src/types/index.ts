@@ -52,6 +52,11 @@ export interface NeighborhoodAnalysis {
   accessibility: { transitDistance: string; essentialServices: string; walkScore: number; highwayAccess: string };
   overallScore: number;
   scoreJustification: string;
+  customRanking?: {
+    name: string; sector: string;
+    ra: number; rd: number; vr: number; ts: number; id: number;
+    score: number; tier: string; ranking: number; totalNeighborhoods: number;
+  };
 }
 
 export interface MarketRent {

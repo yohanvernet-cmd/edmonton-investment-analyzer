@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { excelToText } from '@/lib/parsers/excel-to-text';
 import { extractWithAI, analyzeNeighborhoodWithAI, generateSmartSummary } from '@/lib/analysis/ai-engine';
 import { runFullAnalysis } from '@/lib/analysis/engine';
+import { findNeighborhood } from '@/lib/data/neighborhood-rankings';
 import type { NeighborhoodAnalysis } from '@/types';
 
 export async function POST(req: NextRequest) {
@@ -57,6 +58,22 @@ export async function POST(req: NextRequest) {
 
     // Override neighborhood with AI data
     analysis.neighborhood = mergeNeighborhoodData(analysis.neighborhood, aiNeighborhood);
+
+    // Look up custom neighborhood ranking
+    const customRanking = findNeighborhood(proForma.address);
+    if (customRanking) {
+      analysis.neighborhood.customRanking = {
+        name: customRanking.name, sector: customRanking.sector,
+        ra: customRanking.ra, rd: customRanking.rd, vr: customRanking.vr,
+        ts: customRanking.ts, id: customRanking.id,
+        score: customRanking.score, tier: customRanking.tier,
+        ranking: customRanking.ranking, totalNeighborhoods: 272,
+      };
+      // Combine: 50% AI score + 50% custom score (custom is /10, AI is /10)
+      const aiScore = analysis.neighborhood.overallScore;
+      const customScore = customRanking.score; // already /10 scale (max ~7.7)
+      analysis.neighborhood.overallScore = Math.round(((aiScore + customScore) / 2) * 10) / 10;
+    }
 
     // Step 5: AI generates smart executive summary (wait 2s to avoid rate limit)
     await new Promise(r => setTimeout(r, 2000));
