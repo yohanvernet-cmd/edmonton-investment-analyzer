@@ -209,15 +209,27 @@ function analyzeExpenses(proForma: ProFormaData, neighborhood: NeighborhoodAnaly
     flag: expenses.management === 0,
   });
 
-  // Caretaker
-  if (expenses.caretaker > 0 || proForma.numberOfUnits >= 4) {
+  // Caretaker — forced to $0 (covered by higher maintenance & capital reserve)
+  if (expenses.caretaker > 0) {
     items.push({
       category: 'Concierge/Gardien',
       projected: expenses.caretaker,
-      recommended: expenses.caretaker,
-      gapDollar: 0,
-      impactOnNOI: 0,
-      flag: false,
+      recommended: 0,
+      gapDollar: -expenses.caretaker,
+      impactOnNOI: expenses.caretaker,
+      flag: true,
+    });
+  }
+
+  // Other costs — forced to $0 (covered by higher maintenance & capital reserve)
+  if (expenses.other > 0) {
+    items.push({
+      category: 'Autres coûts',
+      projected: expenses.other,
+      recommended: 0,
+      gapDollar: -expenses.other,
+      impactOnNOI: expenses.other,
+      flag: true,
     });
   }
 
