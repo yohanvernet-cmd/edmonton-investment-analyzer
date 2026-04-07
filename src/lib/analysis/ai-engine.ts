@@ -63,13 +63,13 @@ Réponds UNIQUEMENT avec du JSON valide:
 
 // ── Gemini API ──
 
-const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash-lite'];
+const MODELS = ['gemini-2.5-flash'];
 
 async function callGemini(prompt: string, userContent: string, apiKey: string): Promise<any> {
   let lastError = '';
 
   for (const model of MODELS) {
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < 4; attempt++) {
       try {
         const res = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -89,8 +89,8 @@ async function callGemini(prompt: string, userContent: string, apiKey: string): 
           return JSON.parse(text);
         }
 
-        if (res.status === 429) {
-          await new Promise(r => setTimeout(r, (attempt + 1) * 16000));
+        if (res.status === 429 || res.status === 503) {
+          await new Promise(r => setTimeout(r, (attempt + 1) * 10000));
           continue;
         }
 
