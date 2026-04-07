@@ -116,7 +116,7 @@ Réponds UNIQUEMENT avec du JSON valide:
 
 // ── Gemini API ──
 
-const MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash-lite'];
 
 async function callGemini(prompt: string, userContent: string, apiKey: string): Promise<any> {
   let lastError = '';
