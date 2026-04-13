@@ -9,8 +9,10 @@ export function ProFormaComparison({ revised }: { revised: RevisedProForma }) {
   const o = revised.original;
   const r = revised.revised;
 
-  const rows: { label: string; original: number; revisedVal: number; format: (v: number) => string }[] = [
-    { label: 'NOI', original: o.noi, revisedVal: r.noi, format: formatCurrency },
+  const rows: { label: string; original: number; revisedVal: number; format: (v: number) => string; bold?: boolean }[] = [
+    { label: t('Revenu brut effectif (EGI)', 'Effective Gross Income (EGI)'), original: o.effectiveGrossIncome, revisedVal: r.effectiveGrossIncome, format: formatCurrency, bold: true },
+    { label: t('Total dépenses', 'Total Expenses'), original: o.totalExpenses, revisedVal: r.totalExpenses, format: formatCurrency, bold: true },
+    { label: 'NOI', original: o.noi, revisedVal: r.noi, format: formatCurrency, bold: true },
     { label: t('Cash Flow annuel', 'Annual Cash Flow'), original: o.annualCashFlow, revisedVal: r.annualCashFlow, format: formatCurrency },
     { label: 'Cap Rate', original: o.capRate, revisedVal: r.capRate, format: v => `${v}%` },
     { label: 'Cash-on-Cash Return', original: o.cashOnCashReturn, revisedVal: r.cashOnCashReturn, format: v => `${v}%` },
@@ -30,13 +32,13 @@ export function ProFormaComparison({ revised }: { revised: RevisedProForma }) {
             <th className="text-right py-2 text-slate-500 font-medium">{t('Révisé', 'Revised')}</th>
             <th className="text-right py-2 text-slate-500 font-medium">{t('Écart', 'Gap')}</th>
           </tr></thead>
-          <tbody>{rows.map(r => {
-            const diff = r.revisedVal - r.original;
-            return (<tr key={r.label} className="border-b border-slate-50">
-              <td className="py-2 text-slate-700">{r.label}</td>
-              <td className="py-2 text-right font-medium">{r.format(r.original)}</td>
-              <td className="py-2 text-right font-medium">{r.format(r.revisedVal)}</td>
-              <td className={`py-2 text-right font-medium ${diff < -0.01 ? 'text-red-600' : diff > 0.01 ? 'text-green-600' : ''}`}>{diff >= 0 ? '+' : ''}{r.format(diff)}</td>
+          <tbody>{rows.map(row => {
+            const diff = row.revisedVal - row.original;
+            return (<tr key={row.label} className={`border-b border-slate-50 ${row.bold ? 'bg-slate-50' : ''}`}>
+              <td className={`py-2 text-slate-700 ${row.bold ? 'font-semibold' : ''}`}>{row.label}</td>
+              <td className="py-2 text-right font-medium">{row.format(row.original)}</td>
+              <td className="py-2 text-right font-medium">{row.format(row.revisedVal)}</td>
+              <td className={`py-2 text-right font-medium ${diff < -0.01 ? 'text-red-600' : diff > 0.01 ? 'text-green-600' : ''}`}>{diff >= 0 ? '+' : ''}{row.format(diff)}</td>
             </tr>);
           })}</tbody>
         </table>

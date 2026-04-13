@@ -152,6 +152,25 @@ function analyzeExpenses(proForma: ProFormaData, neighborhood: NeighborhoodAnaly
   const mins = EDMONTON_MARKET.minimums;
   const items: ExpenseAnalysis['items'] = [];
 
+  // ── Vacancy (separate from operating expenses) ──
+  const projVacancyDollar = expenses.vacancyDollar > 0
+    ? expenses.vacancyDollar
+    : Math.round((expenses.vacancy / 100) * totalAnnualRevenue);
+  const projVacancyRate = expenses.vacancy || (totalAnnualRevenue > 0 ? (projVacancyDollar / totalAnnualRevenue) * 100 : 0);
+  const recVacancyRate = Math.max(projVacancyRate, mins.vacancyRate, neighborhood.vacancy.currentRate);
+  const recVacancyDollar = Math.round((recVacancyRate / 100) * totalAnnualRevenue);
+
+  const vacancy = {
+    projected: projVacancyDollar,
+    recommended: Math.max(projVacancyDollar, recVacancyDollar),
+    projectedRate: Math.round(projVacancyRate * 10) / 10,
+    recommendedRate: Math.round(recVacancyRate * 10) / 10,
+    flag: projVacancyDollar < recVacancyDollar,
+  };
+
+  // EGI for insurance calculation (gross revenue - recommended vacancy)
+  const egi = totalAnnualRevenue - vacancy.recommended;
+
   // Property tax
   const minTax = Math.round(salePrice * mins.propertyTaxRate);
   items.push({
@@ -163,29 +182,15 @@ function analyzeExpenses(proForma: ProFormaData, neighborhood: NeighborhoodAnaly
     flag: expenses.propertyTax < minTax,
   });
 
-  // Vacancy — use dollar amount from pro forma if available
-  const projVacancyDollar = expenses.vacancyDollar > 0
-    ? expenses.vacancyDollar
-    : Math.round((expenses.vacancy / 100) * totalAnnualRevenue);
-  const recVacancyRate = Math.max(expenses.vacancy, mins.vacancyRate, neighborhood.vacancy.currentRate);
-  const recVacancyDollar = Math.round((recVacancyRate / 100) * totalAnnualRevenue);
-  items.push({
-    category: 'Vacance',
-    projected: projVacancyDollar,
-    recommended: Math.max(projVacancyDollar, recVacancyDollar),
-    gapDollar: Math.round(Math.max(0, recVacancyDollar - projVacancyDollar)),
-    impactOnNOI: Math.round(-Math.max(0, recVacancyDollar - projVacancyDollar)),
-    flag: projVacancyDollar < recVacancyDollar,
-  });
-
-  // Insurance
+  // Insurance (4.6% of EGI)
+  const minInsurance = Math.round(egi * 0.046);
   items.push({
     category: 'Assurances',
     projected: expenses.insurance,
-    recommended: expenses.insurance || Math.round(salePrice * 0.004),
-    gapDollar: 0,
-    impactOnNOI: 0,
-    flag: expenses.insurance === 0,
+    recommended: Math.max(expenses.insurance, minInsurance),
+    gapDollar: Math.round(Math.max(0, minInsurance - expenses.insurance)),
+    impactOnNOI: Math.round(-Math.max(0, minInsurance - expenses.insurance)),
+    flag: expenses.insurance < minInsurance,
   });
 
   // Maintenance (min 5% of gross revenue)
@@ -215,41 +220,25 @@ function analyzeExpenses(proForma: ProFormaData, neighborhood: NeighborhoodAnaly
     category: 'Gestion immobilière',
     projected: expenses.management,
     recommended: expenses.management || Math.round(totalAnnualRevenue * 0.08),
-    gapDollar: 0,
-    impactOnNOI: 0,
+    gapDollar: 0, impactOnNOI: 0,
     flag: expenses.management === 0,
   });
 
-  // Caretaker — forced to $0 (covered by higher maintenance & capital reserve)
+  // Caretaker — forced to $0
   if (expenses.caretaker > 0) {
-    items.push({
-      category: 'Concierge/Gardien',
-      projected: expenses.caretaker,
-      recommended: 0,
-      gapDollar: -expenses.caretaker,
-      impactOnNOI: expenses.caretaker,
-      flag: true,
-    });
+    items.push({ category: 'Concierge/Gardien', projected: expenses.caretaker, recommended: 0, gapDollar: -expenses.caretaker, impactOnNOI: expenses.caretaker, flag: true });
   }
 
-  // Other costs — forced to $0 (covered by higher maintenance & capital reserve)
+  // Other costs — forced to $0
   if (expenses.other > 0) {
-    items.push({
-      category: 'Autres coûts',
-      projected: expenses.other,
-      recommended: 0,
-      gapDollar: -expenses.other,
-      impactOnNOI: expenses.other,
-      flag: true,
-    });
+    items.push({ category: 'Autres coûts', projected: expenses.other, recommended: 0, gapDollar: -expenses.other, impactOnNOI: expenses.other, flag: true });
   }
 
-  // Calculate totals EXCLUDING interest rate row (it's not an operating expense)
-  const expenseItems = items.filter(i => i.category !== 'Taux d\'intérêt');
-  const projectedTotal = expenseItems.reduce((s, i) => s + i.projected, 0);
-  const recommendedTotal = expenseItems.reduce((s, i) => s + i.recommended, 0);
+  // Totals: operating expenses only (vacancy is separate)
+  const projectedTotal = items.reduce((s, i) => s + i.projected, 0);
+  const recommendedTotal = items.reduce((s, i) => s + i.recommended, 0);
 
-  return { items, projectedTotal, recommendedTotal };
+  return { items, vacancy, projectedTotal, recommendedTotal };
 }
 
 // ── 4. Revised Pro Forma ──
@@ -281,30 +270,37 @@ function buildRevisedProForma(
     flag: mortgageFlag,
   };
 
-  const original = calculateMetrics(proForma, proForma.totalAnnualRevenue, proForma.expenses.totalAnnual);
+  const origVacancy = expenses.vacancy.projected;
+  const revVacancy = expenses.vacancy.recommended;
+
+  const original = calculateMetrics(proForma, proForma.totalAnnualRevenue, proForma.expenses.totalAnnual - origVacancy, origVacancy);
   const adjustedAnnualRevenue = revenue.totalMarketMonthly * 12;
   const adjustedAnnualExpenses = expenses.recommendedTotal;
   const adjustedDebtService = recommendedMonthly * 12;
 
-  const revised = calculateMetrics(proForma, adjustedAnnualRevenue, adjustedAnnualExpenses, adjustedDebtService);
+  const revised = calculateMetrics(proForma, adjustedAnnualRevenue, adjustedAnnualExpenses, revVacancy, adjustedDebtService);
 
   return { original, revised, adjustedRevenue: adjustedAnnualRevenue, adjustedExpenses: adjustedAnnualExpenses, mortgage };
 }
 
-function calculateMetrics(proForma: ProFormaData, annualRevenue: number, annualExpenses: number, debtService?: number): FinancialMetrics {
+function calculateMetrics(proForma: ProFormaData, annualRevenue: number, annualExpenses: number, vacancyDollar: number, debtService?: number): FinancialMetrics {
   const ds = debtService || proForma.loan.monthlyPayment * 12;
-  const noi = annualRevenue - annualExpenses;
+  const effectiveGrossIncome = annualRevenue - vacancyDollar;
+  const totalExpenses = annualExpenses; // operating expenses only, vacancy is separate
+  const noi = effectiveGrossIncome - totalExpenses;
   const annualCashFlow = noi - ds;
   const totalInvested = proForma.downPayment + proForma.closingCosts;
 
   return {
+    effectiveGrossIncome: Math.round(effectiveGrossIncome),
+    totalExpenses: Math.round(totalExpenses),
     noi: Math.round(noi),
     annualCashFlow: Math.round(annualCashFlow),
     cashOnCashReturn: totalInvested > 0 ? Math.round((annualCashFlow / totalInvested) * 10000) / 100 : 0,
     capRate: proForma.salePrice > 0 ? Math.round((noi / proForma.salePrice) * 10000) / 100 : 0,
     dscr: ds > 0 ? Math.round((noi / ds) * 100) / 100 : 0,
     pricePerUnit: proForma.numberOfUnits > 0 ? Math.round(proForma.salePrice / proForma.numberOfUnits) : 0,
-    operatingExpenseRatio: annualRevenue > 0 ? Math.round((annualExpenses / annualRevenue) * 10000) / 100 : 0,
+    operatingExpenseRatio: effectiveGrossIncome > 0 ? Math.round((totalExpenses / effectiveGrossIncome) * 10000) / 100 : 0,
   };
 }
 

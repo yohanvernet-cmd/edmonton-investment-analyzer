@@ -25,7 +25,7 @@ export const EDMONTON_MARKET = {
   minimums: {
     interestRate: 4.25,
     propertyTaxRate: 0.009,  // 0.9% of purchase price
-    vacancyRate: 4,          // 4% minimum
+    vacancyRate: 5,          // 5% minimum
     maintenanceRate: 0.05,   // 5% of gross revenue
     capitalReserveRate: 0.05, // 5% of gross revenue
   },

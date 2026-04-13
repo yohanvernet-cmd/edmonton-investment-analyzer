@@ -91,11 +91,14 @@ export interface ExpenseAnalysis {
     impactOnNOI: number;
     flag: boolean;
   }[];
+  vacancy: { projected: number; recommended: number; projectedRate: number; recommendedRate: number; flag: boolean };
   projectedTotal: number;
   recommendedTotal: number;
 }
 
 export interface FinancialMetrics {
+  effectiveGrossIncome: number;
+  totalExpenses: number;
   noi: number;
   annualCashFlow: number;
   cashOnCashReturn: number;

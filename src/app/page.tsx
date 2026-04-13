@@ -25,7 +25,7 @@ function AppContent() {
           </div>
           <div className="flex items-center gap-3">
             <LangToggle />
-            <span className="text-xs text-slate-400 font-mono">v3.1</span>
+            <span className="text-xs text-slate-400 font-mono">v3.2</span>
           </div>
         </div>
       </header>
