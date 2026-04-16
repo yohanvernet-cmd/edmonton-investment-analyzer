@@ -11,8 +11,6 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as File;
     if (!file) return NextResponse.json({ error: 'Aucun fichier fourni' }, { status: 400 });
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return NextResponse.json({ error: 'Clé API Gemini non configurée' }, { status: 500 });
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const name = file.name.toLowerCase();
@@ -34,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     // Single AI call: extraction + neighborhood + summary
     const { proForma, neighborhood: aiNeighborhood, summary: aiSummary } = await analyzeWithAI(
-      `Nom du fichier: ${file.name}\n\n${textContent}`, apiKey
+      `Nom du fichier: ${file.name}\n\n${textContent}`
     );
 
     if (!proForma.salePrice || !proForma.numberOfUnits) {
@@ -86,8 +84,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(analysis);
   } catch (err: any) {
     console.error('Analysis error:', err);
-    if (err.message?.includes('API key') || err.message?.includes('API_KEY')) {
-      return NextResponse.json({ error: 'Clé API Gemini invalide.' }, { status: 401 });
+    if (err.message?.includes('Bedrock')) {
+      return NextResponse.json({ error: 'Erreur Bedrock AI. Vérifiez la configuration AWS.' }, { status: 401 });
     }
     if (err.message?.includes('JSON')) {
       return NextResponse.json({ error: 'Erreur de parsing de la réponse IA. Réessayez.' }, { status: 500 });
