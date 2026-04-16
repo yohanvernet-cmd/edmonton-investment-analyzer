@@ -1,40 +1,41 @@
 import type { ProFormaData } from '@/types';
+import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 
-const COMBINED_PROMPT = `Tu es un expert en analyse d'investissement immobilier à Edmonton, Alberta.
-On te donne le contenu brut d'un pro forma immobilier. Tu dois faire 3 choses en UNE SEULE réponse JSON:
+const COMBINED_PROMPT = `Tu es un expert en analyse d'investissement immobilier a Edmonton, Alberta.
+On te donne le contenu brut d'un pro forma immobilier. Tu dois faire 3 choses en UNE SEULE reponse JSON:
 
-1. EXTRAIRE les données du pro forma
-2. ANALYSER le quartier basé sur l'adresse
-3. GÉNÉRER un résumé exécutif
+1. EXTRAIRE les donnees du pro forma
+2. ANALYSER le quartier base sur l'adresse
+3. GENERER un resume executif
 
-RÈGLES CRITIQUES POUR L'EXTRACTION:
+REGLES CRITIQUES POUR L'EXTRACTION:
 - Les montants sont en dollars canadiens, les loyers sont MENSUELS sauf indication contraire
-- Le taux d'intérêt DOIT être en pourcentage entier (4.5 pour 4.5%, PAS 0.045)
+- Le taux d'interet DOIT etre en pourcentage entier (4.5 pour 4.5%, PAS 0.045)
 - Pour la vacance: retourne le montant ANNUEL en $ ET le pourcentage
-- Pour TOUTES les dépenses: retourne le montant ANNUEL en dollars
-- UNITÉS: Extrais CHAQUE unité individuellement. Un immeuble de 8 unités = 8 entrées dans "units"
-- Identifie chaque unité: sous-sol/basement, étage supérieur/upper, rez-de-chaussée/main
-- Sépare les frais de stationnement et animaux des loyers de base
+- Pour TOUTES les depenses: retourne le montant ANNUEL en dollars
+- UNITES: Extrais CHAQUE unite individuellement. Un immeuble de 8 unites = 8 entrees dans "units"
+- Identifie chaque unite: sous-sol/basement, etage superieur/upper, rez-de-chaussee/main
+- Separe les frais de stationnement et animaux des loyers de base
 
-RÈGLES POUR LES LOYERS DU MARCHÉ:
+REGLES POUR LES LOYERS DU MARCHE:
 - Base-toi sur RentFaster.ca, Rentals.ca, Zumper pour Edmonton
-- Ce sont des CONSTRUCTIONS NEUVES = loyers plus élevés
-- 1-2 chambres en SOUS-SOL, 3 chambres à l'ÉTAGE SUPÉRIEUR
+- Ce sont des CONSTRUCTIONS NEUVES = loyers plus eleves
+- 1-2 chambres en SOUS-SOL, 3 chambres a l'ETAGE SUPERIEUR
 - Le QUARTIER influence les loyers
 - Fourchettes 2025-2026 pour du neuf: Basement 1BR: 1100-1400$, Basement 2BR: 1300-1600$, Upper 3BR: 2000-2400$, Main 2BR: 1400-1700$
-- Un upper 3BR neuf ne devrait JAMAIS être en dessous de 2000$/mois
+- Un upper 3BR neuf ne devrait JAMAIS etre en dessous de 2000$/mois
 
-RÈGLES POUR LE QUARTIER:
-- Identifie le quartier PRÉCIS (sub-neighborhood). Ex: 2350 Millbourne Rd = Tweddle Place (pas Mill Woods)
+REGLES POUR LE QUARTIER:
+- Identifie le quartier PRECIS (sub-neighborhood). Ex: 2350 Millbourne Rd = Tweddle Place (pas Mill Woods)
 - Score sur 10 pour investissement locatif
 
-Réponds UNIQUEMENT avec du JSON valide:
+Reponds UNIQUEMENT avec du JSON valide:
 {
   "proForma": {
     "salePrice": number,
     "numberOfUnits": number,
-    "address": "string complète",
-    "neighborhood": "string — quartier PRÉCIS (sub-neighborhood)",
+    "address": "string complete",
+    "neighborhood": "string - quartier PRECIS (sub-neighborhood)",
     "units": [{"type": "string", "bedrooms": number, "configuration": "basement"|"upper"|"main"|"unknown", "monthlyRent": number, "parkingFee": number, "petFee": number}],
     "downPayment": number|null,
     "closingCosts": number|null,
@@ -61,66 +62,64 @@ Réponds UNIQUEMENT avec du JSON valide:
   }
 }`;
 
-// ── Gemini API ──
+// -- Bedrock API (Claude) --
 
-const MODELS = ['gemini-2.5-flash'];
+const bedrock = new BedrockRuntimeClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
-async function callGemini(prompt: string, userContent: string, apiKey: string): Promise<any> {
-  let lastError = '';
+async function callBedrock(prompt: string, userContent: string): Promise<any> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const command = new InvokeModelCommand({
+        modelId: 'anthropic.claude-sonnet-4-20250514',
+        contentType: 'application/json',
+        accept: 'application/json',
+        body: JSON.stringify({
+          anthropic_version: 'bedrock-2023-05-31',
+          max_tokens: 8192,
+          temperature: 0.1,
+          messages: [{
+            role: 'user',
+            content: `${prompt}\n\nVoici le contenu du pro forma:\n\n${userContent}`
+          }]
+        })
+      });
 
-  for (const model of MODELS) {
-    for (let attempt = 0; attempt < 4; attempt++) {
-      try {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: `${prompt}\n\n${userContent}` }] }],
-              generationConfig: { temperature: 0.1, responseMimeType: 'application/json' },
-            }),
-          }
-        );
+      const response = await bedrock.send(command);
+      const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+      const text = responseBody.content?.[0]?.text || '{}';
 
-        if (res.ok) {
-          const data = await res.json();
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-          return JSON.parse(text);
-        }
-
-        if (res.status === 429 || res.status === 503) {
-          await new Promise(r => setTimeout(r, (attempt + 1) * 10000));
-          continue;
-        }
-
-        lastError = `${model}: ${res.status}`;
-        break;
-      } catch (e: any) {
-        lastError = `${model}: ${e.message}`;
-        break;
+      // Extract JSON from the response (Claude may wrap it in markdown)
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
       }
+      return JSON.parse(text);
+    } catch (e: any) {
+      if (e.name === 'ThrottlingException' || e.name === 'ServiceUnavailableException') {
+        await new Promise(r => setTimeout(r, (attempt + 1) * 5000));
+        continue;
+      }
+      throw new Error(`Bedrock error: ${e.message}`);
     }
   }
-
-  throw new Error(`IA indisponible (${lastError}). Réessayez dans quelques minutes.`);
+  throw new Error('IA indisponible. Reessayez dans quelques minutes.');
 }
 
-// ── Post-extraction fixes ──
+// -- Post-extraction fixes --
 
 function fixInterestRate(rate: number): number {
   if (rate > 0 && rate < 1) return rate * 100;
   return rate;
 }
 
-// ── Single combined call ──
+// -- Single combined call --
 
-export async function analyzeWithAI(content: string, apiKey: string): Promise<{
+export async function analyzeWithAI(content: string, _apiKey?: string): Promise<{
   proForma: ProFormaData;
   neighborhood: any;
   summary: any;
 }> {
-  const parsed = await callGemini(COMBINED_PROMPT, `Voici le contenu du pro forma:\n\n${content}`, apiKey);
+  const parsed = await callBedrock(COMBINED_PROMPT, content);
 
   const pf = parsed.proForma || {};
   const units = (pf.units || []).map((u: any) => ({
@@ -160,7 +159,7 @@ export async function analyzeWithAI(content: string, apiKey: string): Promise<{
   const proForma: ProFormaData = {
     salePrice,
     numberOfUnits: pf.numberOfUnits || units.length,
-    address: pf.address || 'Adresse non trouvée',
+    address: pf.address || 'Adresse non trouvee',
     aiNeighborhood: pf.neighborhood || undefined,
     units,
     totalMonthlyRevenue,
