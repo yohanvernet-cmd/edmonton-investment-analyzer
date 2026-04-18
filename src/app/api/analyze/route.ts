@@ -84,9 +84,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(analysis);
   } catch (err: any) {
     console.error('Analysis error:', err);
-    if (err.message?.includes('Bedrock')) {
-      return NextResponse.json({ error: 'Erreur Bedrock AI. Vérifiez la configuration AWS.' }, { status: 401 });
-    }
+    
     if (err.message?.includes('JSON')) {
       return NextResponse.json({ error: 'Erreur de parsing de la réponse IA. Réessayez.' }, { status: 500 });
     }
