@@ -4,6 +4,37 @@ import { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useAppStore } from '@/hooks/useAppStore';
 import { useT } from '@/hooks/useLang';
+import * as XLSX from 'xlsx';
+
+const API_URL = 'https://umg0ern27a.execute-api.us-east-1.amazonaws.com/prod/analyze';
+
+function excelToText(buffer: ArrayBuffer): string {
+  const wb = XLSX.read(buffer, { type: 'array' });
+  const lines: string[] = [];
+  for (const name of wb.SheetNames) {
+    lines.push(`=== ${name} ===`);
+    const ws = wb.Sheets[name];
+    const data = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1, defval: '' });
+    for (const row of data) {
+      const vals = (row as any[]).map(c => (c ?? '').toString().trim()).filter(Boolean);
+      if (vals.length) lines.push(vals.join(' | '));
+    }
+  }
+  return lines.join('\n');
+}
+
+async function pdfToText(buffer: ArrayBuffer): Promise<string> {
+  const pdfjsLib = await import('pdfjs-dist');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+  const pages: string[] = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    pages.push(content.items.map((item: any) => item.str).join(' '));
+  }
+  return pages.join('\n');
+}
 
 export function FileUpload() {
   const { setFile, setStep, setProgress, setAnalysis, setError } = useAppStore();
@@ -15,17 +46,54 @@ export function FileUpload() {
     setFile(file);
     setStep('extracting');
     setProgress(10, t('Extraction des données du pro forma...', 'Extracting pro forma data...'));
+
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      setProgress(30, t('Analyse du fichier...', 'Analyzing file...'));
+      const buffer = await file.arrayBuffer();
+      let textContent: string;
+
+      if (file.name.toLowerCase().endsWith('.pdf')) {
+        textContent = await pdfToText(buffer);
+      } else {
+        textContent = excelToText(buffer);
+      }
+
+      if (textContent.trim().length < 50) {
+        throw new Error(t('Le fichier semble vide ou illisible.', 'The file seems empty or unreadable.'));
+      }
+
+      setProgress(30, t('Analyse IA en cours...', 'AI analysis in progress...'));
       setStep('analyzing');
-      const res = await fetch('/api/analyze', { method: 'POST', body: formData });
+
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: `Nom du fichier: ${file.name}\n\n${textContent}` }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Erreur serveur' }));
+        throw new Error(err.error || 'Erreur serveur');
+      }
+
       setProgress(60, t('Analyse du quartier...', 'Analyzing neighborhood...'));
       setStep('neighborhood');
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Unknown error'); }
+
+      const aiData = await res.json();
+
+      // Now run the local financial analysis with the AI data
+      const analysisRes = await fetch('/api/analyze-local', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aiData, fileName: file.name, textContent }),
+      });
+
+      if (!analysisRes.ok) {
+        const err = await analysisRes.json().catch(() => ({ error: 'Erreur analyse locale' }));
+        throw new Error(err.error || 'Erreur analyse locale');
+      }
+
       setProgress(90, t('Génération du rapport...', 'Generating report...'));
-      const analysis = await res.json();
+      const analysis = await analysisRes.json();
       setProgress(100, t('Analyse terminée!', 'Analysis complete!'));
       setTimeout(() => { setAnalysis(analysis); setStep('complete'); }, 500);
     } catch (err: any) { setError(err.message); }
