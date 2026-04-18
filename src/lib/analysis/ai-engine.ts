@@ -70,7 +70,7 @@ async function callBedrock(prompt: string, userContent: string): Promise<any> {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const command = new InvokeModelCommand({
-        modelId: 'anthropic.claude-sonnet-4-20250514',
+        modelId: 'us.anthropic.claude-sonnet-4-20250514-v1:0',
         contentType: 'application/json',
         accept: 'application/json',
         body: JSON.stringify({
