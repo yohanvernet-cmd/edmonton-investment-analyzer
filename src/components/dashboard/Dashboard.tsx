@@ -53,10 +53,10 @@ export function Dashboard({ analysis: initial, onReset }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <RevenueCard analysis={revenueAnalysis} />
         <ExpenseCard analysis={expenseAnalysis} />
-            <BuyingPrice buyingPrice={(analysis as any).buyingPrice} />
-    </div>
+        </div>
       {revisedProForma.mortgage && <MortgageCard mortgage={revisedProForma.mortgage} />}
       <ProFormaComparison revised={revisedProForma} />
+      <BuyingPrice buyingPrice={(analysis as any).buyingPrice} />
     </div>
   );
 }
