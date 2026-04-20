@@ -138,8 +138,8 @@ export async function POST(req: NextRequest) {
 
     
     // Buying Price reverse engineering (DSCR targets)
-    const noi = analysis.revisedProForma?.revised?.noi || analysis.revisedProForma?.original?.noi || (proForma.totalAnnualRevenue - proForma.expenses.totalAnnual);
-    const interestRate = proForma.loan.interestRate;
+    const noi = analysis.revisedProForma?.revised?.noi || (proForma.totalAnnualRevenue - proForma.expenses.totalAnnual);
+    const interestRate = analysis.revisedProForma?.mortgage?.recommendedRate || proForma.loan.interestRate;
     const amortYears = proForma.loan.amortizationYears;
     const downPaymentPercent = proForma.downPayment / (proForma.salePrice || 1);
     const mr2 = (interestRate / 100) / 12;
