@@ -1,5 +1,6 @@
 'use client';
 
+import { BuyingPrice } from '@/components/analysis/BuyingPrice';
 import { useState, useCallback } from 'react';
 import type { FullAnalysis, ProFormaData } from '@/types';
 import { recalculate } from '@/lib/analysis/engine';
@@ -52,7 +53,8 @@ export function Dashboard({ analysis: initial, onReset }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <RevenueCard analysis={revenueAnalysis} />
         <ExpenseCard analysis={expenseAnalysis} />
-      </div>
+            <BuyingPrice buyingPrice={(analysis as any).buyingPrice} />
+    </div>
       {revisedProForma.mortgage && <MortgageCard mortgage={revisedProForma.mortgage} />}
       <ProFormaComparison revised={revisedProForma} />
     </div>
