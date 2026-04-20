@@ -137,32 +137,41 @@ export async function POST(req: NextRequest) {
     (analysis as any).aiMarketRents = aiMarketRents;
 
     
-    // Buying Price reverse engineering (DSCR targets)
-    const noi = analysis.revisedProForma?.revised?.noi || (proForma.totalAnnualRevenue - proForma.expenses.totalAnnual);
-    const interestRate = analysis.revisedProForma?.mortgage?.recommendedRate || proForma.loan.interestRate;
+    // Maximum Buying Price (reverse engineering from revised DSCR)
+    // Logic: revised NOI is fixed. To increase DSCR from current (often < 1.1),
+    // we lower the purchase price -> lower mortgage -> lower debt service -> higher DSCR
+    const revisedNOI = analysis.revisedProForma?.revised?.noi || (proForma.totalAnnualRevenue - proForma.expenses.totalAnnual);
+    const mortgageRate = analysis.revisedProForma?.mortgage?.recommendedRate || proForma.loan.interestRate;
     const amortYears = proForma.loan.amortizationYears;
-    const downPaymentPercent = proForma.downPayment / (proForma.salePrice || 1);
-    const mr2 = (interestRate / 100) / 12;
-    const n2 = amortYears * 12;
-    const mortgageFactor = mr2 > 0 ? (mr2 * Math.pow(1 + mr2, n2)) / (Math.pow(1 + mr2, n2) - 1) : 1 / n2;
+    const dpPercent = proForma.downPayment / (proForma.salePrice || 1);
+    const monthlyRate = (mortgageRate / 100) / 12;
+    const numPayments = amortYears * 12;
+    const paymentFactor = monthlyRate > 0 ? (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1) : 1 / numPayments;
 
-    function maxPriceForDSCR(targetDSCR: number): number {
-      const maxAnnualDebtService = noi / targetDSCR;
-      const maxMonthlyPayment = maxAnnualDebtService / 12;
-      const maxLoan = maxMonthlyPayment / mortgageFactor;
-      const loanToValue = 1 - downPaymentPercent;
-      return Math.round(maxLoan / loanToValue);
+    function maxPriceForTargetDSCR(targetDSCR: number): number {
+      // Max annual debt service to achieve target DSCR
+      const maxAnnualDS = revisedNOI / targetDSCR;
+      // Max monthly mortgage payment
+      const maxMonthlyPayment = maxAnnualDS / 12;
+      // Max loan amount (reverse mortgage formula)
+      const maxLoan = maxMonthlyPayment / paymentFactor;
+      // Max purchase price (loan = price * (1 - downPaymentPercent))
+      const maxPrice = maxLoan / (1 - dpPercent);
+      return Math.round(maxPrice);
     }
 
+    const currentRevisedDSCR = analysis.revisedProForma?.revised?.dscr || 0;
+
     (analysis as any).buyingPrice = {
-      dscr110: maxPriceForDSCR(1.10),
-      dscr120: maxPriceForDSCR(1.20),
-      currentDSCR: analysis.revisedProForma?.revised?.dscr || analysis.revisedProForma?.original?.dscr || 0,
+      dscr110: maxPriceForTargetDSCR(1.10),
+      dscr120: maxPriceForTargetDSCR(1.20),
+      currentDSCR: currentRevisedDSCR,
+      askingPrice: proForma.salePrice,
       assumptions: {
-        noi: Math.round(noi),
-        interestRate,
+        noi: Math.round(revisedNOI),
+        interestRate: mortgageRate,
         amortizationYears: amortYears,
-        downPaymentPercent: Math.round(downPaymentPercent * 100),
+        downPaymentPercent: Math.round(dpPercent * 100),
       }
     };
 
