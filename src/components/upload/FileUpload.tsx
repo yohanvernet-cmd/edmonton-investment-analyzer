@@ -4,9 +4,8 @@ import { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useAppStore } from '@/hooks/useAppStore';
 import { useT } from '@/hooks/useLang';
+import { signedFetch } from '@/lib/aws-auth';
 import * as XLSX from 'xlsx';
-
-const AI_API_URL = 'https://umg0ern27a.execute-api.us-east-1.amazonaws.com/prod/analyze';
 
 function excelToText(buffer: ArrayBuffer): string {
   const wb = XLSX.read(buffer, { type: 'array' });
@@ -39,11 +38,9 @@ export function FileUpload() {
       let textContent: string;
 
       if (file.name.toLowerCase().endsWith('.pdf')) {
-        // For PDF, read as text (basic extraction)
         const bytes = new Uint8Array(buffer);
         const decoder = new TextDecoder('utf-8', { fatal: false });
         textContent = decoder.decode(bytes);
-        // If binary PDF, try to extract visible text
         if (textContent.includes('%PDF')) {
           const matches = textContent.match(/\(([^)]+)\)/g) || [];
           textContent = matches.map(m => m.slice(1, -1)).join(' ');
@@ -59,16 +56,12 @@ export function FileUpload() {
       setProgress(30, t('Analyse IA en cours (Claude via AWS Bedrock)...', 'AI analysis in progress (Claude via AWS Bedrock)...'));
       setStep('analyzing');
 
-      // Call Lambda via API Gateway for AI analysis
-      const aiRes = await fetch(AI_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: 'Nom du fichier: ' + file.name + '\n\n' + textContent }),
-      });
+      const body = JSON.stringify({ content: 'Nom du fichier: ' + file.name + '\n\n' + textContent });
+      const aiRes = await signedFetch(body);
 
       if (!aiRes.ok) {
         const err = await aiRes.json().catch(() => ({ error: 'Erreur IA' }));
-        throw new Error(err.error || 'Erreur IA');
+        throw new Error(err.error || 'Erreur IA: ' + aiRes.status);
       }
 
       const aiData = await aiRes.json();
@@ -76,7 +69,6 @@ export function FileUpload() {
       setProgress(60, t('Analyse du quartier...', 'Analyzing neighborhood...'));
       setStep('neighborhood');
 
-      // Call local route for financial analysis (no Bedrock needed)
       const analysisRes = await fetch('/api/analyze-local', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
