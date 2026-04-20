@@ -136,6 +136,36 @@ export async function POST(req: NextRequest) {
     (analysis as any).negotiationTips = aiSummary.negotiationTips || [];
     (analysis as any).aiMarketRents = aiMarketRents;
 
+    
+    // Buying Price reverse engineering (DSCR targets)
+    const noi = analysis.financials?.noi || (proForma.totalAnnualRevenue - proForma.expenses.totalAnnual);
+    const interestRate = proForma.loan.interestRate;
+    const amortYears = proForma.loan.amortizationYears;
+    const downPaymentPercent = proForma.downPayment / (proForma.salePrice || 1);
+    const mr2 = (interestRate / 100) / 12;
+    const n2 = amortYears * 12;
+    const mortgageFactor = mr2 > 0 ? (mr2 * Math.pow(1 + mr2, n2)) / (Math.pow(1 + mr2, n2) - 1) : 1 / n2;
+
+    function maxPriceForDSCR(targetDSCR: number): number {
+      const maxAnnualDebtService = noi / targetDSCR;
+      const maxMonthlyPayment = maxAnnualDebtService / 12;
+      const maxLoan = maxMonthlyPayment / mortgageFactor;
+      const loanToValue = 1 - downPaymentPercent;
+      return Math.round(maxLoan / loanToValue);
+    }
+
+    (analysis as any).buyingPrice = {
+      dscr110: maxPriceForDSCR(1.10),
+      dscr120: maxPriceForDSCR(1.20),
+      currentDSCR: analysis.financials?.dscr || 0,
+      assumptions: {
+        noi: Math.round(noi),
+        interestRate,
+        amortizationYears: amortYears,
+        downPaymentPercent: Math.round(downPaymentPercent * 100),
+      }
+    };
+
     return NextResponse.json(analysis);
   } catch (err: any) {
     console.error('Local analysis error:', err);
