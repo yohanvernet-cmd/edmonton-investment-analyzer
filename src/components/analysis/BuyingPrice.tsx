@@ -11,11 +11,19 @@ interface BuyingPriceProps {
 export function BuyingPrice({ revisedProForma, proForma }: BuyingPriceProps) {
   const result = useMemo(() => {
     const noi = revisedProForma?.revised?.noi || 0;
+    const currentDSCR = revisedProForma?.revised?.dscr || 0;
+    const askingPrice = proForma.salePrice;
+
+    // Use the SAME debt service that was used to compute the revised DSCR
+    // This ensures consistency: DSCR = NOI / DebtService
+    const currentDebtService = revisedProForma?.mortgage?.recommendedMonthlyPayment
+      ? revisedProForma.mortgage.recommendedMonthlyPayment * 12
+      : proForma.loan.monthlyPayment * 12;
+
+    // Get mortgage parameters from the revised pro forma (same as DSCR calculation)
     const rate = revisedProForma?.mortgage?.recommendedRate || proForma.loan.interestRate;
     const amort = proForma.loan.amortizationYears;
-    const dpPercent = proForma.downPayment / (proForma.salePrice || 1);
-    const askingPrice = proForma.salePrice;
-    const currentDSCR = revisedProForma?.revised?.dscr || 0;
+    const dpPercent = proForma.downPayment / (askingPrice || 1);
 
     const monthlyRate = (rate / 100) / 12;
     const numPayments = amort * 12;
@@ -23,12 +31,17 @@ export function BuyingPrice({ revisedProForma, proForma }: BuyingPriceProps) {
       ? (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1)
       : 1 / numPayments;
 
+    // Derive max price by scaling the current loan proportionally
+    // Current loan = askingPrice * (1 - dpPercent)
+    // Current annual debt service = currentDebtService
+    // For target DSCR: maxAnnualDS = NOI / targetDSCR
+    // Scale factor = maxAnnualDS / currentDebtService
+    // Max price = askingPrice * scaleFactor
     function maxPrice(targetDSCR: number): number {
-      if (noi <= 0 || paymentFactor <= 0) return 0;
+      if (noi <= 0 || currentDebtService <= 0) return 0;
       const maxAnnualDS = noi / targetDSCR;
-      const maxMonthlyPayment = maxAnnualDS / 12;
-      const maxLoan = maxMonthlyPayment / paymentFactor;
-      return Math.round(maxLoan / (1 - dpPercent));
+      const scaleFactor = maxAnnualDS / currentDebtService;
+      return Math.round(askingPrice * scaleFactor);
     }
 
     return {
