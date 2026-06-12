@@ -298,6 +298,7 @@ export function QuickCalculator() {
             <h3 className="font-semibold text-slate-900 mb-3">
               {t('Indicateurs clés', 'Key metrics')}
             </h3>
+            <Metric label={t('Loyer percu', 'Rent collected')} value={formatCurrency(calc.egi)} />
             <Metric label="NOI" value={formatCurrency(calc.noi)} />
             <Metric
               label={t('Cash flow annuel', 'Annual cash flow')}
