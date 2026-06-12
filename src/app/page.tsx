@@ -1,14 +1,20 @@
 'use client';
 
+import { useState } from 'react';
 import { useAppStore } from '@/hooks/useAppStore';
-import { LangProvider, LangToggle, useLang } from '@/hooks/useLang';
+import { LangProvider, LangToggle, useLang, useT } from '@/hooks/useLang';
 import { FileUpload } from '@/components/upload/FileUpload';
 import { ProgressBar } from '@/components/upload/ProgressBar';
 import { Dashboard } from '@/components/dashboard/Dashboard';
+import { QuickCalculator } from '@/components/calculator/QuickCalculator';
+
+type UploadMode = 'upload' | 'calculator';
 
 function AppContent() {
   const { step, analysis, error, reset } = useAppStore();
   const { lang } = useLang();
+  const t = useT();
+  const [mode, setMode] = useState<UploadMode>('upload');
 
   return (
     <>
@@ -25,13 +31,37 @@ function AppContent() {
           </div>
           <div className="flex items-center gap-3">
             <LangToggle />
-            <span className="text-xs text-slate-400 font-mono">v3.3.5</span>
+            <span className="text-xs text-slate-400 font-mono">v3.4.0</span>
           </div>
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-4 py-8">
         <div className="space-y-8">
-          {step === 'upload' && <FileUpload />}
+          {step === 'upload' && (
+            <div className="space-y-6">
+              <div className="flex justify-center">
+                <div className="inline-flex p-1 bg-slate-100 rounded-lg">
+                  <button
+                    onClick={() => setMode('upload')}
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition ${
+                      mode === 'upload' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {t('Importer un pro forma', 'Upload pro forma')}
+                  </button>
+                  <button
+                    onClick={() => setMode('calculator')}
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition ${
+                      mode === 'calculator' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {t('Calculatrice rapide', 'Quick Calculator')}
+                  </button>
+                </div>
+              </div>
+              {mode === 'upload' ? <FileUpload /> : <QuickCalculator />}
+            </div>
+          )}
           {(step === 'extracting' || step === 'analyzing' || step === 'neighborhood') && <ProgressBar />}
           {step === 'error' && (
             <div className="card border-red-200 bg-red-50">
